@@ -41,7 +41,7 @@ def call_hamlet_agent(state: GraphState):
     llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash-exp", temperature=0.7)
 
     prompt = f"""
-    당신은 윌리엄 셰익스피어의 작품 '햄릿'의 '햄릿'입니다. 지금까지의 상황에서 햄릿이 어떻게 행동하고 반응할지 한두 문장으로 작성하세요.
+    당신은 윌리엄 셰익스피어의 작품 '햄릿'의 '햄릿'입니다. 지금까지의 상황에서 햄릿이 어떻게 행동하고 반응할지 작성하세요.
     햄릿의 관점에서 행동, 대사, 생각을 표현해주세요.
 
     [지금까지의 상황]

@@ -45,6 +45,7 @@ env/
 # Jupyter Notebook
 .ipynb_checkpoints
 *.ipynb_checkpoints
+*.ipynb
 
 # Testing
 .pytest_cache/
@@ -54,3 +55,6 @@ htmlcov/
 # OS
 .DS_Store
 Thumbs.db
+
+# Generated files
+graph.png
