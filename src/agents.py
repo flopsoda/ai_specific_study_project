@@ -1,7 +1,7 @@
 from typing import List, TypedDict, Optional
 from langchain_google_genai import ChatGoogleGenerativeAI
 import asyncio
-from config import CHARACTERS
+from config import CHARACTERS, ENVIRONMENT_CONFIG
 
 # 그래프의 상태(State) 정의
 class GraphState(TypedDict):
@@ -16,13 +16,13 @@ async def _get_character_vote(character_name:str, story_so_far:str) -> Optional[
     """단일 캐릭터의 투표를 비동기적으로 얻는 헬퍼 함수"""
     llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash",temperature=0)
     prompt = f"""
-    당신은 '{character_name}'입니다. 아래 상황을 보고, 당신이 다음 차례에 행동하거나 말하는 것이 적절한지 판단해주세요.
+    당신은 '{character_name}'입니다. 아래 상황을 보고, 당신이 다음 차례에 행동하거나 말하는 것이 적절한지 판단해주세요.  이야기의 흐름을 이어가는 것이 중요합니다.
 
     [상황]
     {story_so_far}
 
     [판단]
-    행동하는 것이 적절하다면 '네', 그렇지 않다면 '아니요' 라고만 대답해주세요.
+    조금이라도 행동할 여지가 있다면 '네'라고 답해주세요. 정말로 할 말이 없거나 행동할 수 없는 명백한 상황에서만 '아니요'라고 답해주세요.
     """
     try:
         response = await llm.ainvoke(prompt)
@@ -85,20 +85,17 @@ def should_continue(state: GraphState):
     
 # 환경을 담당하는 메인 에이전트
 def node_environment(state: GraphState):
-    """
-    환경을 담당하는 메인 에이전트 노드
-    """
+    config = ENVIRONMENT_CONFIG
     story_parts = state["story_parts"]
-    llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0.7)
+    llm = ChatGoogleGenerativeAI(model=config["model"], temperature=config["temperature"])
     character_names = ", ".join([f"'{name}'" for name in CHARACTERS.keys()]) # 사용 가능한 캐릭터 목록
-    prompt = f"""
-    당신은 셰익스피어의 소설 '햄릿'의 세상을 simulating하는 simulator입니다. 당신이 생성한 세상을 텍스트로 묘사해주세요. 당신이 묘사한 세상을 바탕으로 {character_names}의 역할을 하는 서브 에이전트들이 이어서 행동할 것입니다. 
-
-    [이전 장면]
-    {''.join(story_parts)}
-
-    [다음 장면 묘사]
-    """
+    story_so_far = "".join(story_parts)
+    # config의 프롬프트 템플릿을 사용하여 프롬프트를 완성합니다.
+    prompt = config["prompt_template"].format(
+        environment_name=config["environment_name"], # 추가된 부분
+        character_names=character_names,
+        story_so_far=story_so_far
+    )
 
     response = llm.invoke(prompt)
     next_part = response.content

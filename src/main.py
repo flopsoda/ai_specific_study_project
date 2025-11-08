@@ -9,7 +9,7 @@ load_dotenv()
 # --- 그래프 실행 ---
 async def main():
     app = build_graph()
-
+    """
     # 그래프 시각화 
     try:
         img_data = app.get_graph().draw_mermaid_png()
@@ -18,10 +18,10 @@ async def main():
         print("그래프 이미지가 'graph.png'로 저장되었습니다.")
     except Exception as e:
         print(f"그래프 시각화 실패: {e}")
-
+    """
 
     # 그래프 실행
-    initial_prompt = "햄릿과 오필리어가 사랑을 나눈다."
+    initial_prompt = "한국 어느곳의 고등학교. 스나는 민지의 옆자리에 안절부절 못하며 앉아있다. 민지는 그런 스나를 힐끔힐끔 쳐다본다."
     initial_state: GraphState = {"story_parts": [initial_prompt], "selected_character": ""}
     final_state = await app.ainvoke(initial_state)
 
