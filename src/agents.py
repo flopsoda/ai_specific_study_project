@@ -1,6 +1,7 @@
 from typing import List, TypedDict, Optional
 from langchain_google_genai import ChatGoogleGenerativeAI
 import asyncio
+from config import CHARACTERS
 
 # 그래프의 상태(State) 정의
 class GraphState(TypedDict):
@@ -39,7 +40,7 @@ async def race_for_action(state: GraphState) -> dict:
     모든 캐릭터에게 동시에 물어보고, 가장 먼저 '네'라고 답하는 캐릭터를 선택합니다.
     """
     story_so_far = "".join(state["story_parts"])
-    characters = ["hamlet", "ophelia"] # 경쟁에 참여할 캐릭터 목록
+    characters = list(CHARACTERS.keys()) # 경쟁에 참여할 캐릭터 목록
 
     tasks = [asyncio.create_task(_get_character_vote(name, story_so_far)) for name in characters]
     
@@ -83,14 +84,15 @@ def should_continue(state: GraphState):
         return should_continue(state)  # 올바른 입력까지 반복
     
 # 환경을 담당하는 메인 에이전트
-def call_main_agent(state: GraphState):
+def node_environment(state: GraphState):
     """
-    메인 에이전트 노드입니다. Gemini API를 호출하여 다음 이야기 조각을 생성합니다.
+    환경을 담당하는 메인 에이전트 노드
     """
     story_parts = state["story_parts"]
     llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0.7)
+    character_names = ", ".join([f"'{name}'" for name in CHARACTERS.keys()]) # 사용 가능한 캐릭터 목록
     prompt = f"""
-    당신은 셰익스피어의 소설 '햄릿'의 세상을 simulating하는 simulator입니다. 당신이 생성한 세상을 텍스트로 묘사해주세요. 당신이 묘사한 세상을 바탕으로 '햄릿'과 '오필리어'의 역할을 하는 서브 에이전트들이 이어서 행동할 것입니다. 
+    당신은 셰익스피어의 소설 '햄릿'의 세상을 simulating하는 simulator입니다. 당신이 생성한 세상을 텍스트로 묘사해주세요. 당신이 묘사한 세상을 바탕으로 {character_names}의 역할을 하는 서브 에이전트들이 이어서 행동할 것입니다. 
 
     [이전 장면]
     {''.join(story_parts)}
@@ -107,54 +109,36 @@ def call_main_agent(state: GraphState):
     return {
         "story_parts": story_parts + [next_part],
     }
+# 각 캐릭터를 담당하는 서브 에이전트를 생성하는 팩토리 함수
+def create_character_agent(character_name: str, character_prompt: str,model_name: str):
+    """캐릭터 에이전트 노드 함수를 생성합니다."""
+    def character_agent(state: GraphState) -> dict:
+        story_parts = state["story_parts"]
+        llm = ChatGoogleGenerativeAI(model=model_name, temperature=0.7)
 
-# 각 캐릭터를 담당하는 서브 에이전트
-def call_hamlet_agent(state: GraphState):
-    """
-    서브 에이전트: 햄릿 캐릭터의 반응을 담당합니다.
-    """
-    story_parts = state["story_parts"]
-    llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0.7)
+        prompt = f"""
+        {character_prompt}
 
-    prompt = f"""
-    당신은 셰익스피어의 작품 '햄릿'의 햄릿입니다.
+        [지금까지의 상황]
+        {''.join(story_parts)}
 
-    [지금까지의 상황]
-    {''.join(story_parts)}
+        [당신의 다음 행동 또는 대사]
+        """
 
-    """
+        response = llm.invoke(prompt)
+        next_part = f"\n\n**{character_name.capitalize()}**\n{response.content}"
 
-    response = llm.invoke(prompt)
-    next_part = response.content
+        print(f"\n--- 서브 에이전트 ({character_name.capitalize()}) ---")
+        print(next_part)
 
-    print(f"\n---  서브 에이전트 (햄릿) ---")
-    print(next_part)
+        return {
+            "story_parts": story_parts + [next_part],
+        }
+    return character_agent
 
-    return {
-        "story_parts": story_parts + [next_part],
-    }
+# 캐릭터별 에이전트 노드를 동적으로 생성
+character_agents = {
+    f"{name}_agent": create_character_agent(name, data["prompt"],data["model"])
+    for name, data in CHARACTERS.items()
+}
 
-def call_ophelia_agent(state: GraphState):
-    """
-    서브 에이전트: 오필리어 캐릭터의 반응을 담당합니다.
-    """
-    story_parts = state["story_parts"]
-    llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0.7)
-
-    prompt = f"""
-    당신은 셰익스피어의 작품 '햄릿'의 '오필리어'입니다. 
-
-    [지금까지의 상황]
-    {''.join(story_parts)}
-
-    """
-
-    response = llm.invoke(prompt)
-    next_part = response.content
-
-    print(f"\n---  서브 에이전트 (오필리어) ---")
-    print(next_part)
-
-    return {
-        "story_parts": story_parts + [next_part],
-    }
