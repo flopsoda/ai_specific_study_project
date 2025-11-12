@@ -1,3 +1,6 @@
+import os
+os.environ["GRPC_VERBOSITY"] = "NONE" 
+os.environ["GRPC_TRACE"] = ""
 import asyncio
 from dotenv import load_dotenv
 from graph import build_graph
@@ -9,7 +12,7 @@ load_dotenv()
 # --- 그래프 실행 ---
 async def main():
     app = build_graph()
-    """
+    
     # 그래프 시각화 
     try:
         img_data = app.get_graph().draw_mermaid_png()
@@ -18,12 +21,14 @@ async def main():
         print("그래프 이미지가 'graph.png'로 저장되었습니다.")
     except Exception as e:
         print(f"그래프 시각화 실패: {e}")
-    """
+    
 
     # 그래프 실행
-    initial_prompt = "한국 어느곳의 고등학교. 스나는 민지의 옆자리에 안절부절 못하며 앉아있다. 민지는 그런 스나를 힐끔힐끔 쳐다본다."
-    initial_state: GraphState = {"story_parts": [initial_prompt], "selected_character": ""}
-    final_state = await app.ainvoke(initial_state)
+    initial_prompt = "21century of Korea, Hamlet and Ophelia are living in this modern world."
+    initial_state: GraphState = {"story_parts": [initial_prompt],"discussion" : [], "selected_character": ""}
+    # 재귀 제한을 늘려서 config를 설정합니다.
+    config = {"recursion_limit": 100} 
+    final_state = await app.ainvoke(initial_state, config=config)
 
     print("\n--- 최종 결과물 ---")
     print("".join(final_state['story_parts']))
