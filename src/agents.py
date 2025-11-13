@@ -20,8 +20,16 @@ async def _get_character_vote(character_name:str, story_so_far:str, discussion: 
     """단일 서브 에이전트의 투표를 비동기적으로 얻는 헬퍼 함수"""
     llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash",temperature=0)
     discussion_str = "\n".join(discussion)
+    
+    character_config = CHARACTERS[character_name]
+    character_prompt = character_config["prompt"]
     prompt = f"""
-    당신은 '{character_name}'입니다. 아래 상황과 진행 중인 토론을 보고, 앞으로의 전개에 대해 더 할 말이 있거나 의견을 제시하고 싶으면 '네', 그렇지 않으면 '아니요'라고만 답해주세요.
+    당신은 '{character_name} Specialist Writer'입니다. 당신에게 주어진 정보:
+    ---
+    {character_prompt}
+    ---
+    
+    위 역할을 바탕으로 아래 상황과 진행 중인 토론을 보고, 앞으로의 전개에 대해 더 할 말이 있거나 의견을 제시하고 싶으면 '네', 그렇지 않으면 '아니요'라고만 답해주세요.
 
     [상황]
     {story_so_far}
@@ -122,7 +130,7 @@ def generate_character_opinion(state: GraphState) -> dict:
     """
 
     response = llm.invoke(prompt)
-    opinion = f"**{character_name}**: {response.content.strip()}"
+    opinion = f"**{character_name} specialist writer**: {response.content.strip()}"
     
     print(opinion)
 
