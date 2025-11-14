@@ -1,13 +1,13 @@
 import os
-os.environ["GRPC_VERBOSITY"] = "NONE" 
-os.environ["GRPC_TRACE"] = ""
 import asyncio
 from dotenv import load_dotenv
-from graph import build_graph
-from agents import GraphState
-
 # .env 파일에서 환경 변수를 로드합니다.
 load_dotenv()
+os.environ["GRPC_VERBOSITY"] = "NONE" 
+os.environ["GRPC_TRACE"] = ""
+from graph import build_graph
+from agents import GraphState
+from config import STORY_CONFIG
 
 # --- 그래프 실행 ---
 async def main():
@@ -24,10 +24,10 @@ async def main():
     
 
     # 그래프 실행
-    initial_prompt = "21century of Korea, Hamlet and Ophelia are living in this modern world."
+    initial_prompt = STORY_CONFIG["initial_prompt"]
     initial_state: GraphState = {"story_parts": [initial_prompt],"discussion" : [], "selected_character": ""}
     # 재귀 제한을 늘려서 config를 설정합니다.
-    config = {"recursion_limit": 100} 
+    config = {"recursion_limit": STORY_CONFIG["recursion_limit"]} 
     final_state = await app.ainvoke(initial_state, config=config)
 
     print("\n--- 최종 결과물 ---")

@@ -1,6 +1,4 @@
 import os
-os.environ["GRPC_VERBOSITY"] = "NONE" 
-os.environ["GRPC_TRACE"] = ""
 from typing import List, TypedDict
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.graph import END, StateGraph
@@ -21,11 +19,12 @@ def route_discussion(state: GraphState):
     
     if selected_character == "None":
         # 토론에 참여할 캐릭터가 더 이상 없으면 작가 노드로 이동
-        print("--- 라우팅: 토론 종료, 'main_writer_node' (으)로 이동 ---")
+        print("---토론 끝---")
+        #print("--- 라우팅: 토론 종료, 'main_writer_node' (으)로 이동 ---")
         return "main_writer_node"
     else:
         # 발언권을 얻은 캐릭터가 있으면 의견 생성 노드로 이동
-        print(f"--- 라우팅: '{selected_character}'의 의견 생성 ---")
+       # print(f"--- 라우팅: '{selected_character}'의 의견 생성 ---")
         return "generate_character_opinion"
 
 

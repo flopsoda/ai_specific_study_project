@@ -1,13 +1,23 @@
-ENVIRONMENT_CONFIG = {
+STORY_CONFIG = {
+    "initial_prompt":"21세기 한국, 현대 사회에 살고 있는 햄릿과 오필리아.",
+    "recursion_limit" : 150,
+}
+
+MAIN_WRITER_CONFIG = {
     "model": "gemini-2.5-flash",
     "temperature": 0.7,
     "environment_name": "21century korea",
-    "prompt_template": """당신은 {environment_name}의 세상을 simulating하는 simulator입니다. 당신이 생성한 세상을 텍스트로 묘사해주세요. 당신이 묘사한 세상을 바탕으로 {character_names}의 역할을 하는 서브 에이전트들이 이어서 행동할 것입니다. {character_names}의 역할은 빼앗지 마세요. {character_names}에 해당하지 않는 캐릭터들은 등장시키거나 조작해도 괜찮습니다.
+    "prompt_template": """당신은 전문 소설가입니다. 아래는 지금까지의 이야기와 등장인물들의 토론 내용입니다.
+이 두 가지를 모두 참고하여, 다음 이야기 단락을 흥미롭게 작성해주세요.
+토론에서 나온 아이디어들을 자연스럽게 이야기에 녹여내세요.
 
-[이전 장면]
+[지금까지의 이야기]
 {story_so_far}
 
-[다음 장면 묘사]"""
+[등장인물들의 토론]
+{discussion_str}
+
+[다음 이야기]""",
 }
 
 CHARACTERS = {
@@ -63,8 +73,46 @@ Fate: Dies by drowning in a river (implied suicide).
         """,
         "model": "gemini-2.5-flash",
     },
-    # 여기에 새 캐릭터를 추가할 수 있습니다.
     # "claudius": {
     #     "prompt": "당신은 셰익스피어의 작품 '햄릿'의 '클로디어스'입니다. ..."
     # },
+}
+
+CHARACTER_AGENT_CONFIG = {
+    "vote_model": "gemini-2.5-flash",
+    "vote_temperature": 0.0,
+    "opinion_model": "gemini-2.5-flash",
+    "opinion_temperature": 0.7,
+    "prompt_templates": {
+        "vote": """당신은 작가 회의에 참여한 '{character_name} Specialist Writer'입니다. 당신에게 전문 분야야는 다음과 같습니다.
+---
+{character_prompt}
+---
+
+아래 [지금까지의 상황]의 현재까지의 이야기와 [진행중인 토론]의 다른 동료 작가들의 의견들을 듣고, 다음 장면의 전개에 대해 더 할 말이 있거나 의견을 제시하고 싶으면 '네', 그렇지 않으면 '아니요'라고만 답해주세요. 토론 기록에서 '{character_name} Specialist Writer'라고 표시된 것은 당신의 이전 발언입니다.
+
+[상황]
+{story_so_far}
+
+[진행 중인 토론]
+{discussion_str}
+
+[판단]
+이야기 전개에 대해 덧붙일 의견이 있습니까? (네/아니요)""",
+         "generate_opinion": """당신은 작가 회의에 참여한 '{character_name} Specialist Writer'입니다. 당신에게 전문 분야는 다음과 같습니다.
+---
+{character_prompt}
+---
+
+아래 [지금까지의 상황]의 현재까지의 이야기와 [진행중인 토론]의 다른 동료 작가들의 의견들을 듣고, 다음 장면에 대한 당신의 아이디어를 마크다운 문법을 사용하지 않고 실제 대화하듯이 간결하게 제안해보세요. 토론 기록에서 '{character_name} Specialist Writer'라고 표시된 것은 당신의 이전 발언입니다. 자신이 이미 한 말을 반복하거나 단순히 칭찬하지 말고, 이야기를 진전시킬 수 있는 실행 가능한 제안을 해야 합니다.
+
+[지금까지의 상황]
+{story_so_far}
+
+[진행 중인 토론]
+{discussion_str}
+
+[당신의 의견]
+위 상황과 토론을 바탕으로, 앞으로 이야기가 어떻게 진행되어야 할지에 대한 당신의 의견을 간략하게 말해주세요.""",
+    }
 }
