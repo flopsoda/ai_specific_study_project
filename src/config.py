@@ -1,14 +1,21 @@
 STORY_CONFIG = {
-    "initial_prompt":"21세기 한국, 현대 사회에 살고 있는 햄릿과 오필리아.",
+    "initial_prompt":"""고요하고 드넓은 신세계의 바다 위, 사우전드 써니 호는 따스한 햇살을 받으며 순항하고 있었다. 포성은 잠잠하고, 거친 파도도 없는 평화로운 오후. 밀짚모자 해적단의 선원들은 저마다의 방식으로 망중한을 즐기고 있었다.
+
+선수상 위, 사자 갈기처럼 생긴 잔디 갑판에 앉은 선장 몽키 D. 루피는 낚싯대를 드리운 채 하품을 연신 해댔다. 하지만 그의 인내심은 길지 않았다. "아~ 배고파! 상디! 간식 아직 멀었어?" 외침이 배 전체에 울려 퍼졌다. 주방에서는 때마침 향긋한 냄새와 함께 요리사 상디가 나왔다. "시끄러워, 고무 자식아! 지금 막 아가씨들을 위한 특제 파르페를 만들고 있으니 얌전히 기다려!" 그는 나미와 로빈에게 대접할 화려한 디저트가 담긴 쟁반을 들고 있었다.
+
+전망대에서는 롤로노아 조로가 화도일문자를 닦으며 낮잠을 즐기고 있었고, 우솝은 새로운 필살 무기라며 정체불명의 식물 씨앗에 물을 주고 있었다. 한편, 아쿠아리움 바에서는 항해사 나미가 해도를 그리며 다음 섬의 항로를 계산하느라 여념이 없었고, 고고학자 니코 로빈은 그 옆에서 조용히 두꺼운 역사책 페이지를 넘기고 있었다. 선의 토니토니 쵸파는 약초를 정리하고 있었고, 프랑키는 콜라를 마시며 배의 동력부를 점검했다. 갑판 한쪽에서는 브룩이 바이올린으로 유쾌한 멜로디를 연주하며 이 평화로운 풍경에 배경음악을 더했다. '요호호호, 정말 좋은 날씨군요!'
+
+상디가 나미와 로빈에게 파르페를 건네자, 두 사람의 얼굴에 화사한 미소가 피어났다. 그 순간을 놓치지 않고 루피의 고무 팔이 순식간에 늘어나 파르페의 체리를 낚아채려 했다. 하지만 그보다 더 빠른 상디의 검은 다리가 루피의 팔을 걷어찼다. "이 망할 고무가! 감히 레이디들의 디저트를 넘봐?" "아얏! 치사해, 상디! 나도 한 입만 줘!" 둘의 소란에 조로가 한쪽 눈을 슬쩍 뜨며 중얼거렸다. "시끄럽군, 망할 요리사." "뭐라고, 길 잃은 마리모 자식아!" 평화롭지만 시끌벅적한, 사우전드 써니 호의 전형적인 오후가 깊어가고 있었다.
+""",
     "recursion_limit" : 150,
 }
 
 MAIN_WRITER_CONFIG = {
     "model": "gemini-2.5-flash",
     "temperature": 0.7,
-    "world_name": "21century korea",
-    "world_description": "현대 사회에 살고 있는 햄릿과 오필리아",
-    "prompt_template": """당신은 전문 소설가입니다. 당신이 쓸 소설의 세계관은 다음과 같습니다.
+    "world_name": "원피스 (One Piece)",
+    "world_description": "해적왕 골 D. 로저가 남긴 대비보 '원피스'를 찾아 수많은 해적들이 바다로 나서는 '대해적시대'. 악마의 열매 능력자, 기이한 섬들, 그리고 세계정부와 해군이 존재하는 광활하고 예측 불가능한 바다를 배경으로 합니다.",
+    "prompt_template": """당신은 '원피스' 스타일의 모험 만화 전문 스토리 작가입니다. 당신이 쓸 이야기의 세계관은 다음과 같습니다.
 세계관 이름: {world_name}
 세계관 설명: {world_description}
 
@@ -27,76 +34,71 @@ MAIN_WRITER_CONFIG = {
 }
 
 CHARACTERS = {
-    "Hamlet": {
-        "prompt": """
-Hamlet
-
-Role: Protagonist; Prince of Denmark.
-
-Primary Motivation: To avenge the murder of his father (King Hamlet) by his uncle, Claudius.
-
-Key Traits: Highly intelligent, philosophical, and melancholic. He is often indecisive and prone to existential contemplation.
-
-Tactics: Feigns madness to disguise his true intentions and investigate the King.
-
-Key Relationships:
-
-Claudius: Uncle/Stepfather (Antagonist)
-
-Gertrude: Mother
-
-Ophelia: Love interest
-
-Horatio: Best friend
-
-Famous Line: "To be, or not to be: that is the question."
-
-Fate: Dies after being wounded by Laertes's poisoned sword.""",
-    },
-    "Ophelia": {
-        "prompt": """
-        Ophelia
-Role: Tragic Heroine; Daughter of Polonius.
-
-Primary Conflict: Torn between her loyalty to her father (Polonius) and her love for Hamlet.
-
-Key Traits: Innocent, obedient, and dutiful. She is emotionally fragile and dependent on the men in her life.
-
-Tragedy: Driven to genuine madness after Hamlet rejects her and kills her father.
-
-Key Relationships:
-
-Hamlet: Love interest (who rejects her)
-
-Polonius: Father
-
-Laertes: Brother
-
-Famous Scene: Distributing flowers (rosemary, pansies, fennel) which symbolize her grief and madness.
-
-Fate: Dies by drowning in a river (implied suicide).
-        """,
-    },
-    "Plot_Twist": {
-        "prompt": "이야기 속에서 예상치 못한 전개나 놀라운 반전을 만들어내는 것을 전문으로 합니다. 독자의 예상을 뒤엎어 서스펜스와 몰입감을 높이는 역할을 담당하며, 이를 위해 새로운 정보를 도입하거나, 캐릭터의 숨겨진 동기를 드러내거나, 갑작스러운 운명의 반전을 일으키는 등의 아이디어를 제안합니다.",
-    },
-        "Leader": {
+    "Leader": {
         "prompt": """동료 작가들의 의견을 취합하고, 토론을 마무리하기 위해 정리하며 의견 수렴을 유도한다. 최대한 빠르게 토론을 끝내는 것을 목표로 한다. 토론을 마칠 정도의 의견이 나왔다면, 명시적으로 토론을 끝내자고 말하며 발언을 그만하라고 한다. 토론을 마치자고 해도, 다른 작가들이 발언을 이어간다면 화를 낼 수 있다."""
+    },
+    "Comedy": {
+        "prompt": "이야기를 더 재미있고 웃기게 만드는 것을 전문으로 합니다. 캐릭터들의 고유한 성격과 과장된 특징을 활용하여 독자들이 웃을 수 있는 개그, 슬랩스틱, 만담 같은 코미디 상황을 제안합니다. 평범한 상황을 비틀어 예상치 못한 웃음을 유발하는 아이디어를 내는 것을 목표로 합니다.",
+    },
+    "Luffy": {
+        "prompt": """
+- 이름: 몽키 D. 루피
+- 역할: 밀짚모자 해적단의 선장
+- 목표: 해적왕이 되어 원피스를 찾는 것.
+- 성격: 극도로 단순하고, 자유분방하며, 모험을 즐긴다. 식욕이 엄청나며, 특히 고기를 좋아한다. 동료애가 매우 강하고, 복잡한 계획보다는 직감과 본능에 따라 즉흥적으로 행동한다.
+- 능력: 초인계 악마의 열매 '고무고무 열매' 능력자.
+""",
+    },
+    "Zoro": {
+        "prompt": """
+- 이름: 롤로노아 조로
+- 역할: 밀짚모자 해적단의 전투원
+- 목표: 세계 최강의 검호가 되는 것.
+- 성격: 진지하고 과묵하며, 수련에 매우 엄격하다. 끔찍한 길치이며, 선장 루피에게 절대적인 충성심을 보인다. 요리사 상디와는 항상 다툰다.
+- 능력: 삼도류(三刀流) 검술의 달인. 초인적인 힘과 맷집을 지녔다.
+""",
+    },
+    "Nami": {
+        "prompt": """
+- 이름: 나미
+- 역할: 밀짚모자 해적단의 항해사
+- 목표: 전 세계의 해도를 그리는 것.
+- 성격: 돈과 보물을 매우 좋아한다. 명석한 두뇌로 날씨를 예측하고 배를 이끄는 천재 항해사. 동료들의 엉뚱한 행동에 딴지를 거는 상식인 포지션이지만, 자신도 돈 앞에서는 이성을 잃는다.
+- 능력: 날씨를 과학적으로 예측하고, '크리마 텍트'를 이용해 날씨를 조종하여 싸운다.
+"""
+    },
+    "Sanji": {
+        "prompt": """
+- 이름: 상디
+- 역할: 밀짚모자 해적단의 요리사
+- 목표: 전설의 바다 '오올 블루'를 찾는 것.
+- 성격: 여성에게 극도로 약하고 신사적으로 행동한다. 요리에 대한 자부심이 매우 강하며, 동료들의 식사를 책임진다. 전투 시에는 손을 사용하지 않고 오직 다리 기술만으로 싸운다. 조로와는 앙숙 관계.
+- 능력: '검은 다리' 스타일의 강력한 다리 기술. 최고 수준의 요리 실력.
+"""
+    },
+    "Usopp": {
+        "prompt": """
+- 이름: 우솝
+- 역할: 밀짚모자 해적단의 저격수
+- 목표: 용감한 바다의 전사가 되는 것.
+- 성격: 겁이 많고, 허풍과 거짓말을 자주 한다. 위험한 상황에서는 도망칠 궁리부터 하지만, 동료를 위해서라면 용기를 낸다. 손재주가 뛰어나 다양한 무기와 도구를 만들어낸다.
+- 능력: 새총을 이용한 백발백중의 저격 실력. '팝 그린' 등 특수한 식물 씨앗을 무기로 활용.
+"""
     },
 }
 
 CHARACTER_AGENT_CONFIG = {
-    "vote_model": "gemini-2.5-flash",
+    "vote_model": "gemini-2.5-flash-lite",
     "vote_temperature": 0.0,
     "opinion_model": "gemini-2.5-flash",
     "opinion_temperature": 0.7,
     "prompt_templates": {
-        "vote": """당신은 작가 회의에 참여한 '{character_name} Specialist Writer'입니다. 당신에게 전문 분야는 다음과 같습니다.
+        "vote": """당신은 작가 회의에 참여한 '{character_name} Specialist Writer'입니다. 당신이 작가로서 전문으로 하는 분야는 다음과 같습니다.
 ---
 {character_prompt}
 ---
 
-아래 [지금까지의 상황]의 현재까지의 이야기와 [진행중인 토론]의 다른 동료 작가들의 의견들을 듣고, 다음 장면에 대해 더 할 말이 있거나 의견을 제시하고 싶으면 '네', 그렇지 않으면 '아니요'라고만 답해주세요. 토론의 목표는 다음 이야기 단락을 위한 핵심 아이디어를 모으는 것입니다. 이미 충분한 아이디어가 나왔다고 판단되면 토론을 마무리해야 합니다. 토론 기록에서 '{character_name} Specialist Writer'라고 표시된 것은 당신의 이전 발언입니다.
+아래 [지금까지의 상황]의 현재까지의 이야기와 [진행중인 토론]의 다른 동료 작가들의 의견들을 듣고, 다음 장면에 대해 더 할 말이 있거나 의견을 제시하고 싶으면 '네', 그렇지 않으면 '아니요'라고만 답해주세요. 토론의 목표는 다음 이야기 단락을 위한 핵심 아이디어를 모으는 것입니다. 이미 충분한 아이디어가 나왔다고 판단되거나, 토론을 마무리하자는 말이 나왔다면 토론을 마무리해야 합니다. 토론 기록에서 '{character_name} Specialist Writer'라고 표시된 것은 당신의 이전 발언입니다.
 
 [상황]
 {story_so_far}
@@ -106,11 +108,12 @@ CHARACTER_AGENT_CONFIG = {
 
 [판단]
 이야기 전개에 대해 덧붙일 의견이 있습니까? (네/아니요)""",
-         "generate_opinion": """당신은 작가 회의에 참여한 '{character_name} Specialist Writer'입니다. 당신에게 전문 분야는 다음과 같습니다.
+         "generate_opinion": """당신은 작가 회의에 참여한 '{character_name} Specialist Writer'입니다. 당신이 작가로서 전문으로 하는 분야는 다음과 같습니다.
 ---
 {character_prompt}
 ---
 
+당신의 발언은 담당 분야에 대한 작가적 분석과 제안이어야 합니다.
 아래 [지금까지의 상황]의 현재까지의 이야기와 [진행중인 토론]의 다른 동료 작가들의 의견들을 듣고, 다음 장면에 대한 당신의 아이디어를 마크다운 문법을 사용하지 않고 실제 대화하듯이 간결하게 제안해보세요. 토론 기록에서 '{character_name} Specialist Writer'라고 표시된 것은 당신의 이전 발언입니다. 자신이 이미 한 말을 반복하거나 단순히 칭찬하지 말고, 이야기를 진전시킬 수 있는 실행 가능한 제안을 해야 합니다.
 
 [지금까지의 상황]
