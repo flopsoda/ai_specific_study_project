@@ -14,13 +14,14 @@ async def main():
     app = build_graph()
     
     # 그래프 시각화 
-    try:
+    """try:
         img_data = app.get_graph().draw_mermaid_png()
         with open("graph.png", "wb") as f:
             f.write(img_data)
         print("그래프 이미지가 'graph.png'로 저장되었습니다.")
     except Exception as e:
         print(f"그래프 시각화 실패: {e}")
+    """
     
 
     # 그래프 실행

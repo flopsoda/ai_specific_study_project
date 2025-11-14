@@ -24,6 +24,8 @@ def main_writer_node(state: GraphState) -> dict:
         temperature=MAIN_WRITER_CONFIG["temperature"]
         )
     prompt = MAIN_WRITER_CONFIG["prompt_template"].format(
+        world_name=MAIN_WRITER_CONFIG["world_name"],
+        world_description=MAIN_WRITER_CONFIG["world_description"],
         story_so_far=story_so_far,
         discussion_str=discussion_str
     )
