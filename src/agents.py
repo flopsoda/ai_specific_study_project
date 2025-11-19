@@ -12,6 +12,12 @@ class GraphState(TypedDict):
     discussion : list[str]
     selected_character: str
 
+# [추가] 메인 작가용 LLM 전역 인스턴스 생성
+WRITER_LLM = ChatGoogleGenerativeAI(
+    model=MAIN_WRITER_CONFIG["model"],
+    temperature=MAIN_WRITER_CONFIG["temperature"]
+)
+
 # ---토론 내용을 바탕으로 이야기를 작성하는 메인 작가 에이전트---
 def main_writer_node(state: GraphState) -> dict:
     """
@@ -20,18 +26,15 @@ def main_writer_node(state: GraphState) -> dict:
     print("\n--- 메인 작가 에이전트 작동 ---")
     story_so_far = "".join(state["story_parts"])
     discussion_str = "\n".join(state["discussion"])
-    # 메인 작가용 LLM 설정
-    llm = ChatGoogleGenerativeAI(
-        model=MAIN_WRITER_CONFIG["model"],
-        temperature=MAIN_WRITER_CONFIG["temperature"]
-        )
+    
+    # [수정] 전역 인스턴스 WRITER_LLM 사용
     prompt = MAIN_WRITER_CONFIG["prompt_template"].format(
         world_name=MAIN_WRITER_CONFIG["world_name"],
         world_description=MAIN_WRITER_CONFIG["world_description"],
         story_so_far=story_so_far,
         discussion_str=discussion_str
     )
-    response = llm.invoke(prompt)
+    response = WRITER_LLM.invoke(prompt)
     next_part = response.content.strip()
     print("--- 생성된 장면 ---")
     print(next_part)
@@ -48,6 +51,13 @@ VOTE_LLM = ChatGoogleGenerativeAI(
     model = CHARACTER_AGENT_CONFIG["vote_model"],
     temperature=CHARACTER_AGENT_CONFIG["vote_temperature"]
 )
+
+# [추가] 의견 생성용 LLM 전역 인스턴스 생성
+OPINION_LLM = ChatGoogleGenerativeAI(
+    model=CHARACTER_AGENT_CONFIG["opinion_model"],
+    temperature=CHARACTER_AGENT_CONFIG["opinion_temperature"]
+)
+
 async def _get_character_vote(character_name:str, story_so_far:str, discussion: list[str]) -> Optional[str]:
     """단일 서브 에이전트의 투표를 비동기적으로 얻는 헬퍼 함수"""
     discussion_str = "\n".join(discussion)
@@ -111,17 +121,15 @@ def generate_character_opinion(state: GraphState) -> dict:
     discussion_str = "\n".join(discussion)
     # 캐릭터 설정 가져오기
     character_config = CHARACTERS[character_name]
-    llm = ChatGoogleGenerativeAI(
-        model=CHARACTER_AGENT_CONFIG["opinion_model"],
-        temperature=CHARACTER_AGENT_CONFIG["opinion_temperature"]
-        )
+    
+    # [수정] 전역 인스턴스 OPINION_LLM 사용
     prompt = CHARACTER_AGENT_CONFIG["prompt_templates"]["generate_opinion"].format(
         character_name=character_name,
         character_prompt=character_config["prompt"],
         story_so_far=story_so_far,
         discussion_str=discussion_str
     )
-    response = llm.invoke(prompt)
+    response = OPINION_LLM.invoke(prompt)
     opinion = f"**{character_name} specialist writer**: {response.content.strip()}" 
     print(opinion)
     # 생성된 의견을 discussion 리스트에 추가
