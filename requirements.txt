@@ -3,3 +3,6 @@ langchain-google-genai
 python-dotenv
 langchain
 lark
+fastapi
+uvicorn[standard]
+requests

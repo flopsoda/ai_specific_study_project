@@ -7,7 +7,8 @@ from agents import (
     main_writer_node,
     generate_character_opinion, 
     race_for_action,
-    should_continue
+    check_continuation, # 추가
+    route_continuation  # 추가
 )
 from config import CHARACTERS
 # --- 토론 라우팅 함수 ---
@@ -30,28 +31,20 @@ def route_discussion(state: GraphState):
 
 # --- 그래프 구성 및 컴파일 ---
 def build_graph():
-
     workflow = StateGraph(GraphState)
 
-    # 1 노드 추가
-    workflow.add_node("race_for_action", race_for_action) # 경쟁 노드 추가
-    workflow.add_node("generate_character_opinion",generate_character_opinion) # 의견 생성 노드 추가
-    workflow.add_node("main_writer_node", main_writer_node) # 메인 작가 노드 추가가
-    workflow.add_node("should_continue_node", should_continue) # 계속할지 묻는 노드
+    # 1. 노드 추가
+    workflow.add_node("race_for_action", race_for_action)
+    workflow.add_node("generate_character_opinion", generate_character_opinion)
+    workflow.add_node("main_writer_node", main_writer_node)
+    workflow.add_node("check_continuation", check_continuation) # 대기 노드 추가
 
-    # 2. 진입점 설정
-    workflow.set_entry_point("should_continue_node") 
-    # 3. 엣지 연결 
-    # 사용자가 계속하기를 원하면 토론 시작
-    workflow.add_conditional_edges(
-        "should_continue_node",
-        lambda state: "race_for_action" if state.get("selected_character") == "start_discussion" else "end",
-        {
-            "race_for_action": "race_for_action",
-            "end": END
-        }
-    )
-    # 토론 진행 여부에 따라 분기
+    # 2. 진입점
+    workflow.set_entry_point("race_for_action")
+
+    # 3. 엣지 연결
+    
+    # 토론 라우팅 (기존과 동일)
     workflow.add_conditional_edges(
         "race_for_action",
         route_discussion,
@@ -61,11 +54,20 @@ def build_graph():
         }
     )
 
-    # 캐릭터가 의견을 생성하면 다시 토론 참여 경쟁으로 돌아감
+    # 캐릭터 의견 생성 후 -> 다시 경쟁 (기존과 동일)
     workflow.add_edge("generate_character_opinion", "race_for_action")
-    
-    # 작가가 글 작성을 마치면 다시 계속할지 물어봄
-    workflow.add_edge("main_writer_node", "should_continue_node")
 
-    # 4. 그래프 컴파일
+    # [변경] 작가가 글을 쓰면 -> 바로 끝나는 게 아니라 -> 사용자 확인 노드로 이동
+    workflow.add_edge("main_writer_node", "check_continuation")
+
+    # [추가] 사용자 확인 노드에서 -> 계속할지 끝낼지 분기
+    workflow.add_conditional_edges(
+        "check_continuation",
+        route_continuation,
+        {
+            "race_for_action": "race_for_action", # 계속하기
+            END: END                              # 종료
+        }
+    )
+
     return workflow.compile()

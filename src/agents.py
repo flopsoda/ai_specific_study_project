@@ -3,6 +3,8 @@ from typing import List, TypedDict, Optional
 from langchain_google_genai import ChatGoogleGenerativeAI
 import asyncio
 from config import CHARACTERS, MAIN_WRITER_CONFIG, CHARACTER_AGENT_CONFIG
+from shared import global_state
+from langgraph.graph import END
 
 # ---그래프의 상태(State) 정의---
 class GraphState(TypedDict):
@@ -125,27 +127,41 @@ def generate_character_opinion(state: GraphState) -> dict:
     # 생성된 의견을 discussion 리스트에 추가
     return {"discussion": discussion + [opinion]}
 
-## ---사용자에게 계속 할 것인지 묻는 노드---
-def should_continue(state: GraphState):
-    """
-    사용자 입력에 따라 이야기 생성을 계속할지 결정하고, 그 결과를 상태에 저장합니다.
-    이 함수는 이제 노드 역할을 합니다.
-    """
-    user_input = input("\n계속하시겠습니까? (c/e): ").strip().lower()  
-    if user_input == "c":
-        print("\n---토론 시작---")
-        # 다음 엣지에서 사용할 수 있도록 선택을 상태에 저장합니다.
-        return {"selected_character": "start_discussion"}
-    elif user_input == "e":
-        return {"selected_character": "end"}
-    else:
-        print("'c' 또는 'e'를 입력해주세요.")
-        return should_continue(state)  # 올바른 입력까지 반복
-
-
-
-
+# [수정됨] 사용자 입력을 비동기로 기다리는 노드
+async def check_continuation(state: GraphState):
+    print("\n⏳ 웹 브라우저에서 [계속하기] 또는 [종료]를 선택하기를 기다리는 중...")
     
+    # 1. 웹 UI에 버튼을 띄우라고 신호를 보냄
+    global_state["waiting_for_input"] = True
+    global_state["user_decision"] = None # 이전 결정 초기화
+
+    # 2. 웹에서 버튼을 누를 때까지 무한 대기 (0.5초 간격 체크)
+    while global_state["user_decision"] is None:
+        await asyncio.sleep(0.5)
+
+    # 3. 결정이 내려지면 신호를 끄고 진행
+    decision = global_state["user_decision"]
+    global_state["waiting_for_input"] = False
+    
+    print(f"✅ 사용자 선택 확인: {decision}")
+    
+    # state에 결정을 저장해서 라우터가 판단하게 함 (선택 사항)
+    return {"user_decision": decision}
+
+# [추가됨] 라우팅 로직
+def route_continuation(state: GraphState):
+    # check_continuation 노드에서 결정된 사항을 global_state에서 확인
+    decision = global_state.get("user_decision")
+    
+    if decision == "continue":
+        return "race_for_action"
+    else:
+        return END
+
+
+
+
+
 
 
 
