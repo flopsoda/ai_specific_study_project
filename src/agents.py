@@ -141,7 +141,7 @@ def generate_character_opinion(state: GraphState) -> dict:
         discussion_str=discussion_str
     )
     response = OPINION_LLM.invoke(prompt)
-    opinion = f"**{character_name} specialist writer**: {response.content.strip()}" 
+    opinion = f"[{character_name} 파트 담당 작가]: {response.content.strip()}" 
     print(opinion)
     # 생성된 의견을 discussion 리스트에 추가
     return {"discussion": discussion + [opinion]}

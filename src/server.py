@@ -5,6 +5,7 @@ from shared import global_state
 
 app = FastAPI()
 
+# 다크 테마가 적용된 HTML/CSS/JS
 html_content = """
 <!DOCTYPE html>
 <html>
@@ -12,47 +13,151 @@ html_content = """
         <title>AI 소설 생성 모니터링</title>
         <meta charset="utf-8">
         <style>
-            body { font-family: 'Segoe UI', sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; display: flex; flex-direction: column; gap: 20px; background-color: #f0f2f5; }
-            
-            /* [추가] 상태 바 스타일 */
-            #status-bar {
-                background: white; padding: 15px 25px; border-radius: 12px;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-                display: flex; align-items: center; gap: 15px;
-                font-weight: bold; color: #333; border-left: 5px solid #6c5ce7;
-            }
-            .status-indicator {
-                width: 12px; height: 12px; background-color: #2ecc71; border-radius: 50%;
-                box-shadow: 0 0 0 rgba(46, 204, 113, 0.4);
-                animation: pulse 2s infinite;
-            }
-            @keyframes pulse {
-                0% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.7); }
-                70% { box-shadow: 0 0 0 10px rgba(46, 204, 113, 0); }
-                100% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0); }
+            :root {
+                --bg-color: #1e1e2e;
+                --panel-bg: #313244;
+                --text-main: #cdd6f4;
+                --text-muted: #a6adc8;
+                --accent-color: #89b4fa;
+                --border-color: #45475a;
+                --success-color: #a6e3a1;
+                --danger-color: #f38ba8;
+                --warning-color: #f9e2af;
             }
 
-            .container { display: flex; gap: 20px; height: 75vh; }
-            .box { flex: 1; background: white; padding: 20px; border-radius: 12px; overflow-y: auto; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: flex; flex-direction: column; }
-            h2 { margin-top: 0; padding-bottom: 15px; border-bottom: 2px solid #eee; color: #333; }
-            .content { flex: 1; overflow-y: auto; }
-            .item { margin-bottom: 12px; padding: 12px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #ddd; }
-            .story-text { white-space: pre-wrap; line-height: 1.8; color: #2c3e50; }
-            .discussion-item { border-left-color: #007bff; }
-            
-            /* 컨트롤 패널 스타일 */
-            #control-panel {
-                position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
-                background: white; padding: 15px 30px; border-radius: 50px;
-                box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-                display: none; /* 기본적으로 숨김 */
-                gap: 15px; align-items: center; z-index: 100;
+            body { 
+                font-family: 'Pretendard', 'Segoe UI', sans-serif; 
+                max-width: 1400px; 
+                margin: 0 auto; 
+                padding: 20px; 
+                background-color: var(--bg-color); 
+                color: var(--text-main);
+                height: 100vh;
+                box-sizing: border-box;
+                display: flex;
+                flex-direction: column;
+                gap: 20px;
             }
-            .btn { padding: 12px 24px; border: none; border-radius: 25px; font-size: 16px; font-weight: bold; cursor: pointer; transition: transform 0.1s; }
+            
+            /* 스크롤바 커스텀 */
+            ::-webkit-scrollbar { width: 10px; }
+            ::-webkit-scrollbar-track { background: var(--bg-color); }
+            ::-webkit-scrollbar-thumb { background: #585b70; border-radius: 5px; }
+            ::-webkit-scrollbar-thumb:hover { background: #6c7086; }
+
+            /* 상단 상태 바 */
+            #status-bar {
+                background: var(--panel-bg); 
+                padding: 15px 25px; 
+                border-radius: 12px;
+                border: 1px solid var(--border-color);
+                display: flex; 
+                align-items: center; 
+                gap: 15px;
+                font-weight: bold; 
+                color: var(--text-main); 
+                box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            }
+            .status-indicator {
+                width: 12px; height: 12px; 
+                background-color: var(--success-color); 
+                border-radius: 50%;
+                box-shadow: 0 0 10px var(--success-color);
+                transition: all 0.3s ease;
+            }
+            .status-pulse { animation: pulse 2s infinite; }
+            
+            @keyframes pulse {
+                0% { box-shadow: 0 0 0 0 rgba(166, 227, 161, 0.7); }
+                70% { box-shadow: 0 0 0 10px rgba(166, 227, 161, 0); }
+                100% { box-shadow: 0 0 0 0 rgba(166, 227, 161, 0); }
+            }
+
+            /* 메인 레이아웃 */
+            .container { display: flex; gap: 20px; flex: 1; overflow: hidden; }
+            
+            .box { 
+                flex: 1; 
+                background: var(--panel-bg); 
+                padding: 20px; 
+                border-radius: 16px; 
+                border: 1px solid var(--border-color);
+                display: flex; 
+                flex-direction: column; 
+                box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+            }
+            
+            h2 { 
+                margin-top: 0; 
+                padding-bottom: 15px; 
+                border-bottom: 1px solid var(--border-color); 
+                color: var(--accent-color); 
+                font-size: 1.2rem;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+
+            .content { 
+                flex: 1; 
+                overflow-y: auto; 
+                padding-right: 10px; 
+                font-size: 1.05rem;
+            }
+
+            /* 이야기 텍스트 스타일 */
+            .story-text { 
+                white-space: pre-wrap; 
+                line-height: 1.8; 
+                color: var(--text-main); 
+                font-family: 'Ridibatang', 'KoPub Batang', serif; /* 가독성 좋은 명조 계열 권장 */
+            }
+            .story-paragraph { margin-bottom: 1.5em; text-align: justify; }
+
+            /* 토론 로그 스타일 */
+            .discussion-item { 
+                margin-bottom: 12px; 
+                padding: 15px; 
+                background: #45475a; 
+                border-radius: 12px; 
+                border-left: 4px solid var(--accent-color); 
+                line-height: 1.6;
+                color: #eceff4;
+            }
+            .discussion-item strong { color: var(--accent-color); }
+
+            /* 컨트롤 패널 (플로팅) */
+            #control-panel {
+                position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
+                background: rgba(30, 30, 46, 0.95);
+                padding: 20px 40px; 
+                border-radius: 50px;
+                border: 1px solid var(--accent-color);
+                box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+                display: none; 
+                gap: 20px; 
+                align-items: center; 
+                z-index: 100;
+                backdrop-filter: blur(10px);
+            }
+            
+            .btn { 
+                padding: 12px 30px; 
+                border: none; 
+                border-radius: 25px; 
+                font-size: 16px; 
+                font-weight: bold; 
+                cursor: pointer; 
+                transition: all 0.2s; 
+                color: #1e1e2e;
+            }
+            .btn:hover { transform: translateY(-2px); filter: brightness(1.1); }
             .btn:active { transform: scale(0.95); }
-            .btn-continue { background: #28a745; color: white; }
-            .btn-end { background: #dc3545; color: white; }
-            .status-text { font-weight: bold; color: #555; }
+            
+            .btn-continue { background: var(--success-color); }
+            .btn-end { background: var(--danger-color); }
+            
+            .status-text { font-weight: bold; color: var(--text-muted); }
         </style>
     </head>
     <body>
