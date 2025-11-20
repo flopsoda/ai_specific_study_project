@@ -40,12 +40,11 @@ def main_writer_node(state: GraphState) -> dict:
     )
     response = WRITER_LLM.invoke(prompt)
     next_part = response.content.strip()
-    print("--- 생성된 장면 ---")
-    print(next_part)
-    # 생성된 이야기를 story_parts에 추가하고, 다음 사이클을 위해 토론 내용은 비웁니다.
+    print(f"\n[메인 작가] 이야기 생성 완료:\n{next_part[:100]}...\n")
+    
     return {
         "story_parts": state["story_parts"] + ["\n\n" + next_part],
-        "discussion": [], 
+        # "discussion": [], # <--- [삭제] 여기서 지우지 마세요!
     }
 
 # --- 노드(Node)로 사용할 함수 정의 ---
@@ -167,7 +166,10 @@ async def check_continuation(state: GraphState):
     
     print(f"✅ 사용자 선택 확인: {decision}")
     
-    # state에 결정을 저장해서 라우터가 판단하게 함 (선택 사항)
+    # [핵심 수정] 사용자가 '계속하기'를 눌렀다면, 새로운 토론을 위해 이전 토론 로그를 비웁니다.
+    if decision == "continue":
+        return {"user_decision": decision, "discussion": []} # <--- 여기서 초기화!
+        
     return {"user_decision": decision}
 
 # [추가됨] 라우팅 로직
