@@ -11,6 +11,7 @@ class GraphState(TypedDict):
     story_parts: List[str]  # 지금까지 생성된 이야기 조각들을 리스트로 저장합니다.
     discussion : list[str]
     selected_character: str
+    user_decision: Optional[str]
 
 # [추가] 메인 작가용 LLM 전역 인스턴스 생성
 WRITER_LLM = ChatGoogleGenerativeAI(
