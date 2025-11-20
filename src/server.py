@@ -5,7 +5,7 @@ from shared import global_state
 
 app = FastAPI()
 
-# 다크 테마가 적용된 HTML/CSS/JS
+# 다크 테마가 적용된 HTML/CSS/JS (2열 레이아웃 적용)
 html_content = """
 <!DOCTYPE html>
 <html>
@@ -27,28 +27,43 @@ html_content = """
 
             body { 
                 font-family: 'Pretendard', 'Segoe UI', sans-serif; 
-                max-width: 1400px; 
-                margin: 0 auto; 
+                margin: 0; 
                 padding: 20px; 
                 background-color: var(--bg-color); 
                 color: var(--text-main);
                 height: 100vh;
                 box-sizing: border-box;
-                display: flex;
-                flex-direction: column;
-                gap: 20px;
+                overflow: hidden; /* 전체 스크롤 방지 */
             }
             
             /* 스크롤바 커스텀 */
-            ::-webkit-scrollbar { width: 10px; }
-            ::-webkit-scrollbar-track { background: var(--bg-color); }
-            ::-webkit-scrollbar-thumb { background: #585b70; border-radius: 5px; }
+            ::-webkit-scrollbar { width: 8px; }
+            ::-webkit-scrollbar-track { background: transparent; }
+            ::-webkit-scrollbar-thumb { background: #585b70; border-radius: 4px; }
             ::-webkit-scrollbar-thumb:hover { background: #6c7086; }
 
-            /* 상단 상태 바 */
+            /* 메인 레이아웃: 2열 구조 */
+            .main-layout {
+                display: flex;
+                gap: 20px;
+                height: 100%;
+                width: 100%;
+            }
+
+            .col-left, .col-right {
+                display: flex;
+                flex-direction: column;
+                gap: 20px;
+                flex: 1;
+                min-width: 0; /* Flex 자식 넘침 방지 */
+            }
+
+            /* --- 왼쪽 열 스타일 --- */
+
+            /* 상태 바 (이제 왼쪽 열 상단에 위치) */
             #status-bar {
                 background: var(--panel-bg); 
-                padding: 15px 25px; 
+                padding: 15px 20px; 
                 border-radius: 12px;
                 border: 1px solid var(--border-color);
                 display: flex; 
@@ -57,6 +72,7 @@ html_content = """
                 font-weight: bold; 
                 color: var(--text-main); 
                 box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+                flex-shrink: 0; /* 크기 줄어들지 않음 */
             }
             .status-indicator {
                 width: 12px; height: 12px; 
@@ -73,11 +89,8 @@ html_content = """
                 100% { box-shadow: 0 0 0 0 rgba(166, 227, 161, 0); }
             }
 
-            /* 메인 레이아웃 */
-            .container { display: flex; gap: 20px; flex: 1; overflow: hidden; }
-            
+            /* 박스 공통 스타일 */
             .box { 
-                flex: 1; 
                 background: var(--panel-bg); 
                 padding: 20px; 
                 border-radius: 16px; 
@@ -85,6 +98,8 @@ html_content = """
                 display: flex; 
                 flex-direction: column; 
                 box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+                flex: 1; /* 남은 공간 모두 차지 */
+                overflow: hidden; /* 내부 스크롤을 위해 필수 */
             }
             
             h2 { 
@@ -96,6 +111,7 @@ html_content = """
                 display: flex;
                 align-items: center;
                 gap: 10px;
+                flex-shrink: 0;
             }
 
             .content { 
@@ -110,7 +126,7 @@ html_content = """
                 white-space: pre-wrap; 
                 line-height: 1.8; 
                 color: var(--text-main); 
-                font-family: 'Ridibatang', 'KoPub Batang', serif; /* 가독성 좋은 명조 계열 권장 */
+                font-family: 'Ridibatang', 'KoPub Batang', serif; 
             }
             .story-paragraph { margin-bottom: 1.5em; text-align: justify; }
 
@@ -126,25 +142,35 @@ html_content = """
             }
             .discussion-item strong { color: var(--accent-color); }
 
-            /* 컨트롤 패널 (플로팅) */
+            /* --- 오른쪽 열 스타일 --- */
+
+            /* 컨트롤 패널 (이제 오른쪽 열 하단에 고정) */
             #control-panel {
-                position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
-                background: rgba(30, 30, 46, 0.95);
-                padding: 20px 40px; 
-                border-radius: 50px;
+                background: rgba(30, 30, 46, 0.5);
+                padding: 20px; 
+                border-radius: 16px;
                 border: 1px solid var(--accent-color);
-                box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-                display: none; 
-                gap: 20px; 
+                /* display: flex; -> JS에서 제어 */
+                display: none;
+                flex-direction: column;
+                gap: 15px; 
                 align-items: center; 
-                z-index: 100;
-                backdrop-filter: blur(10px);
+                justify-content: center;
+                flex-shrink: 0; /* 크기 줄어들지 않음 */
+                margin-top: auto; /* 위쪽 요소 밀어내기 */
             }
             
+            .btn-group {
+                display: flex;
+                gap: 15px;
+                width: 100%;
+            }
+
             .btn { 
-                padding: 12px 30px; 
+                flex: 1;
+                padding: 15px; 
                 border: none; 
-                border-radius: 25px; 
+                border-radius: 12px; 
                 font-size: 16px; 
                 font-weight: bold; 
                 cursor: pointer; 
@@ -157,70 +183,91 @@ html_content = """
             .btn-continue { background: var(--success-color); }
             .btn-end { background: var(--danger-color); }
             
-            .status-text { font-weight: bold; color: var(--text-muted); }
+            .status-text-prompt { font-weight: bold; color: var(--text-main); }
+
         </style>
     </head>
     <body>
-        <!-- [추가] 상단 상태 바 -->
-        <div id="status-bar">
-            <div class="status-indicator"></div>
-            <span id="status-text">시스템 초기화 중...</span>
-        </div>
-
-        <div class="container">
-            <div class="box">
-                <h2>📖 이야기 진행 상황</h2>
-                <div id="story-container" class="content story-text"></div>
+        <div class="main-layout">
+            <!-- [왼쪽 열] 상태 바 + 이야기 -->
+            <div class="col-left">
+                <div id="status-bar">
+                    <div class="status-indicator status-pulse"></div>
+                    <span id="status-text">시스템 초기화 중...</span>
+                </div>
+                
+                <div class="box">
+                    <h2>📖 이야기 (Story)</h2>
+                    <div id="story-container" class="content story-text"></div>
+                </div>
             </div>
-            <div class="box">
-                <h2>💬 캐릭터 토론 로그</h2>
-                <div id="discussion-container" class="content"></div>
-            </div>
-        </div>
 
-        <!-- 컨트롤 패널 -->
-        <div id="control-panel">
-            <span class="status-text">다음 행동을 선택하세요:</span>
-            <button class="btn btn-continue" onclick="sendDecision('continue')">계속 진행 (Continue)</button>
-            <button class="btn btn-end" onclick="sendDecision('end')">종료 (End)</button>
+            <!-- [오른쪽 열] 토론 + 컨트롤 패널 -->
+            <div class="col-right">
+                <div class="box">
+                    <h2>💬 작가 회의 (Discussion)</h2>
+                    <div id="discussion-container" class="content"></div>
+                </div>
+
+                <!-- 컨트롤 패널 (평소엔 숨겨져 있다가 필요할 때 나타남) -->
+                <div id="control-panel">
+                    <span class="status-text-prompt">다음 행동을 선택하세요:</span>
+                    <div class="btn-group">
+                        <button class="btn btn-continue" onclick="sendDecision('continue')">계속 진행</button>
+                        <button class="btn btn-end" onclick="sendDecision('end')">종료</button>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <script>
+            let lastDiscussionLength = 0;
+            let lastStoryLength = 0;
+
             async function updateData() {
                 try {
                     const response = await fetch('/data');
                     const data = await response.json();
                     
-                    // [추가] 상태 텍스트 업데이트
+                    // 상태 텍스트 업데이트
                     if (data.current_status) {
                         document.getElementById('status-text').innerText = data.current_status;
                     }
 
                     // 이야기 업데이트
-                    const storyHtml = data.story_parts.join("\\n\\n");
-                    document.getElementById('story-container').innerText = storyHtml;
+                    if (data.story_parts.length !== lastStoryLength) {
+                        const storyHtml = data.story_parts.map(part => `<div class="story-paragraph">${part}</div>`).join("");
+                        const storyContainer = document.getElementById('story-container');
+                        storyContainer.innerHTML = storyHtml;
+                        storyContainer.scrollTop = storyContainer.scrollHeight;
+                        lastStoryLength = data.story_parts.length;
+                    }
 
                     // 토론 업데이트
-                    const discussionContainer = document.getElementById('discussion-container');
-                    discussionContainer.innerHTML = data.discussion.map(d => 
-                        `<div class="item discussion-item">${d}</div>`
-                    ).join('');
-                    
-                    // 스크롤 자동 내리기 (새로운 내용이 있을 때만)
-                    // discussionContainer.scrollTop = discussionContainer.scrollHeight;
+                    if (data.discussion.length !== lastDiscussionLength) {
+                        const discussionContainer = document.getElementById('discussion-container');
+                        discussionContainer.innerHTML = data.discussion.map(d => {
+                            const formatted = d.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                            return `<div class="discussion-item">${formatted}</div>`;
+                        }).join('');
+                        discussionContainer.scrollTop = discussionContainer.scrollHeight;
+                        lastDiscussionLength = data.discussion.length;
+                    }
 
-                    // 버튼 표시 여부 제어
+                    // 버튼 표시 제어
                     const panel = document.getElementById('control-panel');
                     const indicator = document.querySelector('.status-indicator');
                     
                     if (data.waiting_for_input) {
-                        panel.style.display = 'flex';
-                        indicator.style.backgroundColor = '#f1c40f'; // 대기 중일 때는 노란색
-                        indicator.style.animation = 'none'; // 애니메이션 멈춤
+                        panel.style.display = 'flex'; // 패널 보이기
+                        indicator.style.backgroundColor = '#f9e2af';
+                        indicator.style.boxShadow = '0 0 10px #f9e2af';
+                        indicator.classList.remove('status-pulse');
                     } else {
-                        panel.style.display = 'none';
-                        indicator.style.backgroundColor = '#2ecc71'; // 작동 중일 때는 초록색
-                        indicator.style.animation = 'pulse 2s infinite'; // 애니메이션 재생
+                        panel.style.display = 'none'; // 패널 숨기기 (토론창이 자동으로 늘어남)
+                        indicator.style.backgroundColor = '#a6e3a1';
+                        indicator.style.boxShadow = '0 0 10px #a6e3a1';
+                        indicator.classList.add('status-pulse');
                     }
                     
                 } catch (e) {
@@ -230,12 +277,11 @@ html_content = """
 
             async function sendDecision(decision) {
                 await fetch(`/decision/${decision}`, { method: 'POST' });
-                // 클릭 후 즉시 패널 숨김 (반응성 향상)
+                // 즉시 UI 반영
                 document.getElementById('control-panel').style.display = 'none';
                 document.getElementById('status-text').innerText = "명령 전달 중...";
             }
 
-            // 0.5초마다 데이터 갱신
             setInterval(updateData, 500);
             updateData();
         </script>
@@ -253,7 +299,6 @@ async def get_data():
 
 @app.post("/decision/{decision}")
 async def set_decision(decision: str):
-    """웹에서 버튼을 누르면 이 API가 호출됩니다."""
     if decision in ["continue", "end"]:
         global_state["user_decision"] = decision
         return {"status": "ok", "decision": decision}
