@@ -94,6 +94,14 @@ async def race_for_action(state: GraphState) -> dict:
     
     story_so_far = "".join(state["story_parts"])
     discussion = state["discussion"]
+
+      # [검증용 로그] 실제로 비워졌는지 터미널에서 확인
+    print(f"\n[DEBUG] 현재 토론 내역 개수: {len(discussion)}개")
+    if len(discussion) > 0:
+        print(f"[DEBUG] 잔여 데이터 확인: {discussion[0][:30]}...")
+    else:
+        print("[DEBUG] 토론 내역이 깨끗하게 비어있습니다.")
+        
     characters = list(CHARACTERS.keys()) # 경쟁에 참여할 캐릭터 목록
     tasks = [asyncio.create_task(_get_character_vote(name, story_so_far, discussion)) for name in characters] 
     winner = None
