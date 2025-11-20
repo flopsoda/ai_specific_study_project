@@ -3,5 +3,6 @@ global_state = {
     "story_parts": [],
     "discussion": [],
     "waiting_for_input": False, # 웹에서 입력을 기다리는 중인지 여부
-    "user_decision": None       # 유저의 선택 ('continue' 또는 'end')
+    "user_decision": None,      # 유저의 선택 ('continue' 또는 'end')
+    "current_status": "시스템 대기 중..." # [추가] 현재 시스템이 수행 중인 작업 설명
 }

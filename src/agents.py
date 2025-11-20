@@ -24,6 +24,9 @@ def main_writer_node(state: GraphState) -> dict:
     """
     지금까지의 이야기와 캐릭터들의 토론 내용을 종합하여 다음 이야기 단락을 작성합니다.
     """
+    # [추가] 상태 업데이트
+    global_state["current_status"] = "✍️ 메인 작가가 이야기를 집필하고 있습니다..."
+    
     print("\n--- 메인 작가 에이전트 작동 ---")
     story_so_far = "".join(state["story_parts"])
     discussion_str = "\n".join(state["discussion"])
@@ -87,6 +90,9 @@ async def race_for_action(state: GraphState) -> dict:
     """
     모든 캐릭터에게 동시에 물어보고, 가장 먼저 '네'라고 답하는 캐릭터를 선택합니다.
     """
+    # [추가] 상태 업데이트
+    global_state["current_status"] = "👀 눈치 게임 중... (누가 발언할지 경쟁 중)"
+    
     story_so_far = "".join(state["story_parts"])
     discussion = state["discussion"]
     characters = list(CHARACTERS.keys()) # 경쟁에 참여할 캐릭터 목록
@@ -114,6 +120,10 @@ async def race_for_action(state: GraphState) -> dict:
 def generate_character_opinion(state: GraphState) -> dict:
     """선택된 캐릭터가 토론에 대한 의견을 생성하고 discussion 상태를 업데이트합니다."""
     character_name = state["selected_character"]
+    
+    # [추가] 상태 업데이트
+    global_state["current_status"] = f"🗣️ '{character_name}' 작가가 발언을 정리하는 중..."
+
     if not character_name or character_name == "None":
         return {}
    # print(f"\n--- 토론 발언: {character_name} ---")
@@ -140,6 +150,9 @@ def generate_character_opinion(state: GraphState) -> dict:
 async def check_continuation(state: GraphState):
     print("\n⏳ 웹 브라우저에서 [계속하기] 또는 [종료]를 선택하기를 기다리는 중...")
     
+    # [추가] 상태 업데이트
+    global_state["current_status"] = "⏳ 당신의 선택을 기다리고 있습니다."
+
     # 1. 웹 UI에 버튼을 띄우라고 신호를 보냄
     global_state["waiting_for_input"] = True
     global_state["user_decision"] = None # 이전 결정 초기화
