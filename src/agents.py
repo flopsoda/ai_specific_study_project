@@ -5,6 +5,7 @@ import asyncio
 from config import CHARACTERS, MAIN_WRITER_CONFIG, CHARACTER_AGENT_CONFIG
 from shared import global_state
 from langgraph.graph import END
+from utils import get_story_context  # [추가] 유틸리티 함수 임포트
 
 # ---그래프의 상태(State) 정의---
 class GraphState(TypedDict):
@@ -24,14 +25,15 @@ def main_writer_node(state: GraphState) -> dict:
     """
     지금까지의 이야기와 캐릭터들의 토론 내용을 종합하여 다음 이야기 단락을 작성합니다.
     """
-    # [추가] 상태 업데이트
     global_state["current_status"] = "✍️ 메인 작가가 이야기를 집필하고 있습니다..."
     
     print("\n--- 메인 작가 에이전트 작동 ---")
-    story_so_far = "".join(state["story_parts"])
+    
+    # [수정] 유틸리티 함수 사용
+    story_so_far = get_story_context(state["story_parts"])
+    
     discussion_str = "\n".join(state["discussion"])
     
-    # [수정] 전역 인스턴스 WRITER_LLM 사용
     prompt = MAIN_WRITER_CONFIG["prompt_template"].format(
         world_name=MAIN_WRITER_CONFIG["world_name"],
         world_description=MAIN_WRITER_CONFIG["world_description"],
@@ -89,13 +91,13 @@ async def race_for_action(state: GraphState) -> dict:
     """
     모든 캐릭터에게 동시에 물어보고, 가장 먼저 '네'라고 답하는 캐릭터를 선택합니다.
     """
-    # [추가] 상태 업데이트
     global_state["current_status"] = "👀 눈치 게임 중... (누가 발언할지 경쟁 중)"
     
-    story_so_far = "".join(state["story_parts"])
+    # [수정] 유틸리티 함수 사용
+    story_so_far = get_story_context(state["story_parts"])
+    
     discussion = state["discussion"]
-
-      # [검증용 로그] 실제로 비워졌는지 터미널에서 확인
+    # [검증용 로그] 실제로 비워졌는지 터미널에서 확인
     print(f"\n[DEBUG] 현재 토론 내역 개수: {len(discussion)}개")
     if len(discussion) > 0:
         print(f"[DEBUG] 잔여 데이터 확인: {discussion[0][:30]}...")
@@ -128,13 +130,14 @@ def generate_character_opinion(state: GraphState) -> dict:
     """선택된 캐릭터가 토론에 대한 의견을 생성하고 discussion 상태를 업데이트합니다."""
     character_name = state["selected_character"]
     
-    # [추가] 상태 업데이트
     global_state["current_status"] = f"🗣️ '{character_name}' 작가가 발언을 정리하는 중..."
 
     if not character_name or character_name == "None":
         return {}
-   # print(f"\n--- 토론 발언: {character_name} ---")
-    story_so_far = "".join(state["story_parts"])
+
+    # [수정] 유틸리티 함수 사용
+    story_so_far = get_story_context(state["story_parts"])
+    
     discussion = state["discussion"]
     discussion_str = "\n".join(discussion)
     # 캐릭터 설정 가져오기

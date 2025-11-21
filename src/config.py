@@ -33,6 +33,11 @@ MAIN_WRITER_CONFIG = {
 [다음 이야기]""",
 }
 
+# --- 시스템 설정 ---
+# LLM에게 보낼 최근 이야기 문단의 개수 (Context Window)
+STORY_CONTEXT_WINDOW = 5
+
+# --- 캐릭터 설정 ---
 CHARACTERS = {
     "총괄 진행": {
         "prompt": """
