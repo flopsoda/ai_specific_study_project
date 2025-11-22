@@ -5,11 +5,12 @@ import asyncio
 from config import CHARACTERS, MAIN_WRITER_CONFIG, CHARACTER_AGENT_CONFIG
 from shared import global_state
 from langgraph.graph import END
-from utils import get_story_context  # [추가] 유틸리티 함수 임포트
+from utils import get_story_context
 
 # ---그래프의 상태(State) 정의---
 class GraphState(TypedDict):
-    story_parts: List[str]  # 지금까지 생성된 이야기 조각들을 리스트로 저장합니다.
+    story_parts: List[str]  # 전체 이야기 (보존용)
+    current_context: str    # [추가] LLM에게 전달할 요약/슬라이싱된 최신 컨텍스트
     discussion : list[str]
     selected_character: str
     user_decision: Optional[str]
@@ -29,9 +30,11 @@ def main_writer_node(state: GraphState) -> dict:
     
     print("\n--- 메인 작가 에이전트 작동 ---")
     
-    # [수정] 유틸리티 함수 사용
-    story_so_far = get_story_context(state["story_parts"])
-    
+    # 작가는 현재 컨텍스트를 보고 글을 씁니다.
+    story_so_far = state.get("current_context", "")
+    if not story_so_far: # 초기 실행 시 안전장치
+         story_so_far = get_story_context(state["story_parts"])
+
     discussion_str = "\n".join(state["discussion"])
     
     prompt = MAIN_WRITER_CONFIG["prompt_template"].format(
@@ -44,9 +47,13 @@ def main_writer_node(state: GraphState) -> dict:
     next_part = response.content.strip()
     print(f"\n[메인 작가] 이야기 생성 완료:\n{next_part[:100]}...\n")
     
+    # [핵심 변경] 이야기가 추가되었으므로, 다음 턴을 위해 컨텍스트를 미리 갱신합니다.
+    new_story_parts = state["story_parts"] + ["\n\n" + next_part]
+    new_context = get_story_context(new_story_parts) # 여기서 한 번만 계산!
+
     return {
-        "story_parts": state["story_parts"] + ["\n\n" + next_part],
-        # "discussion": [], # <--- [삭제] 여기서 지우지 마세요!
+        "story_parts": new_story_parts,
+        "current_context": new_context, # 갱신된 컨텍스트 저장
     }
 
 # --- 노드(Node)로 사용할 함수 정의 ---
@@ -93,8 +100,10 @@ async def race_for_action(state: GraphState) -> dict:
     """
     global_state["current_status"] = "👀 눈치 게임 중... (누가 발언할지 경쟁 중)"
     
-    # [수정] 유틸리티 함수 사용
-    story_so_far = get_story_context(state["story_parts"])
+    # [수정] 매번 계산하지 않고, State에 저장된 값을 바로 사용
+    story_so_far = state.get("current_context", "")
+    if not story_so_far:
+         story_so_far = get_story_context(state["story_parts"])
     
     discussion = state["discussion"]
     # [검증용 로그] 실제로 비워졌는지 터미널에서 확인
@@ -135,8 +144,10 @@ def generate_character_opinion(state: GraphState) -> dict:
     if not character_name or character_name == "None":
         return {}
 
-    # [수정] 유틸리티 함수 사용
-    story_so_far = get_story_context(state["story_parts"])
+    # [수정] 매번 계산하지 않고, State에 저장된 값을 바로 사용
+    story_so_far = state.get("current_context", "")
+    if not story_so_far:
+         story_so_far = get_story_context(state["story_parts"])
     
     discussion = state["discussion"]
     discussion_str = "\n".join(discussion)

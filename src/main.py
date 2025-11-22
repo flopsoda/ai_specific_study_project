@@ -13,6 +13,7 @@ from agents import GraphState
 from config import STORY_CONFIG
 from server import start_server
 from shared import global_state
+from utils import get_story_context # 임포트 추가
 
 # --- 그래프 실행 ---
 async def main():
@@ -26,8 +27,14 @@ async def main():
     
     # 그래프 실행 설정
     initial_prompt = STORY_CONFIG["initial_prompt"]
+    
+    # [수정] 초기 컨텍스트 설정
+    initial_story_parts = [initial_prompt]
+    initial_context = get_story_context(initial_story_parts)
+
     initial_state: GraphState = {
-        "story_parts": [initial_prompt],
+        "story_parts": initial_story_parts,
+        "current_context": initial_context, # [추가] 초기값 설정
         "discussion": [], 
         "selected_character": ""
     }
