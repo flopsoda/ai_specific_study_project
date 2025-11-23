@@ -6,3 +6,6 @@ lark
 fastapi
 uvicorn[standard]
 requests
+# [추가] RAG 및 벡터 DB 관련 패키지
+langchain-community
+faiss-cpu

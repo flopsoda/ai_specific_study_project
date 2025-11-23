@@ -6,11 +6,13 @@ from config import CHARACTERS, MAIN_WRITER_CONFIG, CHARACTER_AGENT_CONFIG
 from shared import global_state
 from langgraph.graph import END
 from utils import get_story_context
+from memory import lore_book # [추가]
 
 # ---그래프의 상태(State) 정의---
 class GraphState(TypedDict):
-    story_parts: List[str]  # 전체 이야기 (보존용)
-    current_context: str    # [추가] LLM에게 전달할 요약/슬라이싱된 최신 컨텍스트
+    story_parts: List[str]
+    current_context: str
+    retrieved_memory: str   # [추가] 이번 턴에 사용할 과거 기억 (RAG 결과)
     discussion : list[str]
     selected_character: str
     user_decision: Optional[str]
@@ -32,14 +34,14 @@ def main_writer_node(state: GraphState) -> dict:
     
     # 작가는 현재 컨텍스트를 보고 글을 씁니다.
     story_so_far = state.get("current_context", "")
-    if not story_so_far: # 초기 실행 시 안전장치
-         story_so_far = get_story_context(state["story_parts"])
+    context = state.get("retrieved_memory", "") # [추가] 메모리 가져오기
 
     discussion_str = "\n".join(state["discussion"])
     
     prompt = MAIN_WRITER_CONFIG["prompt_template"].format(
         world_name=MAIN_WRITER_CONFIG["world_name"],
         world_description=MAIN_WRITER_CONFIG["world_description"],
+        context=context, # [수정] State에서 받은 메모리 주입
         story_so_far=story_so_far,
         discussion_str=discussion_str
     )
@@ -51,9 +53,16 @@ def main_writer_node(state: GraphState) -> dict:
     new_story_parts = state["story_parts"] + ["\n\n" + next_part]
     new_context = get_story_context(new_story_parts) # 여기서 한 번만 계산!
 
+    # [삭제] 여기서 검색하던 로직 제거 (retrieve_memory_node로 이동했으므로)
+    # relevant_memory = lore_book.search_relevant_info(story_so_far) 
+    
+    # [유지] 글 다 쓰고 나서 저장(Archiving)하는 건 여전히 여기서 해야 함
+    lore_book.check_and_archive(new_story_parts)
+    
     return {
         "story_parts": new_story_parts,
-        "current_context": new_context, # 갱신된 컨텍스트 저장
+        "current_context": new_context,
+        # "retrieved_memory": "" # (선택) 다음 턴을 위해 메모리 초기화? 굳이 안 해도 덮어씌워짐
     }
 
 # --- 노드(Node)로 사용할 함수 정의 ---
@@ -70,7 +79,8 @@ OPINION_LLM = ChatGoogleGenerativeAI(
     temperature=CHARACTER_AGENT_CONFIG["opinion_temperature"]
 )
 
-async def _get_character_vote(character_name:str, story_so_far:str, discussion: list[str]) -> Optional[str]:
+# --- 1. 투표 헬퍼 함수 수정 ---
+async def _get_character_vote(character_name:str, story_so_far:str, discussion: list[str], context: str) -> Optional[str]:
     """단일 서브 에이전트의 투표를 비동기적으로 얻는 헬퍼 함수"""
     discussion_str = "\n".join(discussion)
     character_config = CHARACTERS[character_name]
@@ -78,6 +88,7 @@ async def _get_character_vote(character_name:str, story_so_far:str, discussion: 
     prompt = CHARACTER_AGENT_CONFIG["prompt_templates"]["vote"].format(
         character_name=character_name,
         character_prompt=character_prompt,
+        context=context, # [수정] State에서 받은 메모리 주입
         story_so_far=story_so_far,
         discussion_str=discussion_str
     )
@@ -102,8 +113,7 @@ async def race_for_action(state: GraphState) -> dict:
     
     # [수정] 매번 계산하지 않고, State에 저장된 값을 바로 사용
     story_so_far = state.get("current_context", "")
-    if not story_so_far:
-         story_so_far = get_story_context(state["story_parts"])
+    context = state.get("retrieved_memory", "") # [추가] 메모리 가져오기
     
     discussion = state["discussion"]
     # [검증용 로그] 실제로 비워졌는지 터미널에서 확인
@@ -114,7 +124,8 @@ async def race_for_action(state: GraphState) -> dict:
         print("[DEBUG] 토론 내역이 깨끗하게 비어있습니다.")
         
     characters = list(CHARACTERS.keys()) # 경쟁에 참여할 캐릭터 목록
-    tasks = [asyncio.create_task(_get_character_vote(name, story_so_far, discussion)) for name in characters] 
+    # _get_character_vote 호출 시 context 전달
+    tasks = [asyncio.create_task(_get_character_vote(name, story_so_far, discussion, context)) for name in characters] 
     winner = None
     # asyncio.as_completed는 작업이 완료되는 순서대로 결과를 반환합니다.
     for future in asyncio.as_completed(tasks):
@@ -146,8 +157,7 @@ def generate_character_opinion(state: GraphState) -> dict:
 
     # [수정] 매번 계산하지 않고, State에 저장된 값을 바로 사용
     story_so_far = state.get("current_context", "")
-    if not story_so_far:
-         story_so_far = get_story_context(state["story_parts"])
+    context = state.get("retrieved_memory", "") # [추가] 메모리 가져오기
     
     discussion = state["discussion"]
     discussion_str = "\n".join(discussion)
@@ -158,6 +168,7 @@ def generate_character_opinion(state: GraphState) -> dict:
     prompt = CHARACTER_AGENT_CONFIG["prompt_templates"]["generate_opinion"].format(
         character_name=character_name,
         character_prompt=character_config["prompt"],
+        context=context, # [수정] State에서 받은 메모리 주입
         story_so_far=story_so_far,
         discussion_str=discussion_str
     )
@@ -203,6 +214,25 @@ def route_continuation(state: GraphState):
         return "race_for_action"
     else:
         return END
+
+# [신규] 토론 시작 전, 관련 기억을 검색하여 State에 저장하는 노드
+def retrieve_memory_node(state: GraphState) -> dict:
+    print("\n🧠 [System] 이번 턴에 필요한 과거 기억을 검색합니다...")
+    
+    # 검색 쿼리는 현재 컨텍스트(최근 이야기)를 사용
+    query = state.get("current_context", "")
+    if not query:
+        query = get_story_context(state["story_parts"])
+        
+    # LoreBook에서 검색
+    memory = lore_book.search_relevant_info(query)
+    
+    if memory and "아직 기록된" not in memory:
+        print(f"🔍 검색된 기억: {memory[:50]}...")
+    else:
+        print("🔍 검색된 기억 없음 (초반이거나 데이터 부족)")
+        
+    return {"retrieved_memory": memory}
 
 
 
