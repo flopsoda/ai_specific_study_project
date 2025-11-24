@@ -1,8 +1,10 @@
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 import uvicorn
 from shared import global_state
+import os
 
 app = FastAPI()
 
@@ -11,207 +13,14 @@ class DecisionRequest(BaseModel):
     decision: str
     instruction: str = ""
 
-# 다크 테마가 적용된 HTML/CSS/JS
-html_content = """
-<!DOCTYPE html>
-<html>
-    <head>
-        <title>AI 소설 생성 모니터링</title>
-        <meta charset="utf-8">
-        <style>
-            :root {
-                --bg-color: #1e1e2e;
-                --panel-bg: #313244;
-                --text-main: #cdd6f4;
-                --text-muted: #a6adc8;
-                --accent-color: #89b4fa;
-                --border-color: #45475a;
-                --success-color: #a6e3a1;
-                --danger-color: #f38ba8;
-                --warning-color: #f9e2af;
-            }
-
-            body { 
-                font-family: 'Pretendard', 'Segoe UI', sans-serif; 
-                margin: 0; 
-                padding: 20px; 
-                background-color: var(--bg-color); 
-                color: var(--text-main);
-                height: 100vh;
-                box-sizing: border-box;
-                overflow: hidden; 
-            }
-            
-            ::-webkit-scrollbar { width: 8px; }
-            ::-webkit-scrollbar-track { background: transparent; }
-            ::-webkit-scrollbar-thumb { background: #585b70; border-radius: 4px; }
-            ::-webkit-scrollbar-thumb:hover { background: #6c7086; }
-
-            .main-layout { display: flex; gap: 20px; height: 100%; width: 100%; }
-            .col-left, .col-right { display: flex; flex-direction: column; gap: 20px; flex: 1; min-width: 0; }
-
-            /* 왼쪽 열 */
-            #status-bar {
-                background: var(--panel-bg); padding: 15px 20px; border-radius: 12px;
-                border: 1px solid var(--border-color); display: flex; align-items: center; gap: 15px;
-                font-weight: bold; color: var(--text-main); box-shadow: 0 4px 6px rgba(0,0,0,0.2); flex-shrink: 0; 
-            }
-            .status-indicator {
-                width: 12px; height: 12px; background-color: var(--success-color); border-radius: 50%;
-                box-shadow: 0 0 10px var(--success-color); transition: all 0.3s ease;
-            }
-            .status-pulse { animation: pulse 2s infinite; }
-            @keyframes pulse {
-                0% { box-shadow: 0 0 0 0 rgba(166, 227, 161, 0.7); }
-                70% { box-shadow: 0 0 0 10px rgba(166, 227, 161, 0); }
-                100% { box-shadow: 0 0 0 0 rgba(166, 227, 161, 0); }
-            }
-
-            .box { 
-                background: var(--panel-bg); padding: 20px; border-radius: 16px; 
-                border: 1px solid var(--border-color); display: flex; flex-direction: column; 
-                box-shadow: 0 10px 20px rgba(0,0,0,0.3); flex: 1; overflow: hidden; 
-            }
-            h2 { 
-                margin-top: 0; padding-bottom: 15px; border-bottom: 1px solid var(--border-color); 
-                color: var(--accent-color); font-size: 1.2rem; display: flex; align-items: center; gap: 10px; flex-shrink: 0;
-            }
-            .content { flex: 1; overflow-y: auto; padding-right: 10px; font-size: 1.05rem; }
-            .story-text { white-space: pre-wrap; line-height: 1.8; color: var(--text-main); font-family: 'Ridibatang', 'KoPub Batang', serif; }
-            .story-paragraph { margin-bottom: 1.5em; text-align: justify; }
-            .discussion-item { 
-                margin-bottom: 12px; padding: 15px; background: #45475a; border-radius: 12px; 
-                border-left: 4px solid var(--accent-color); line-height: 1.6; color: #eceff4;
-            }
-
-            /* 오른쪽 열 - 컨트롤 패널 */
-            #control-panel {
-                background: rgba(30, 30, 46, 0.95); padding: 20px; border-radius: 16px;
-                border: 1px solid var(--accent-color); display: none; flex-direction: column;
-                gap: 15px; align-items: stretch; justify-content: center; flex-shrink: 0; margin-top: auto; 
-            }
-            
-            /* 신의 개입 입력창 */
-            #god-input {
-                background: #1e1e2e; border: 1px solid var(--border-color); color: var(--text-main);
-                padding: 12px; border-radius: 8px; font-size: 1rem; width: 100%; box-sizing: border-box;
-            }
-            #god-input:focus { outline: 2px solid var(--accent-color); border-color: transparent; }
-
-            .btn-group { display: flex; gap: 15px; width: 100%; }
-            .btn { 
-                flex: 1; padding: 15px; border: none; border-radius: 12px; font-size: 16px; font-weight: bold; 
-                cursor: pointer; transition: all 0.2s; color: #1e1e2e;
-            }
-            .btn:hover { transform: translateY(-2px); filter: brightness(1.1); }
-            .btn:active { transform: scale(0.95); }
-            .btn-continue { background: var(--success-color); }
-            .btn-end { background: var(--danger-color); }
-            .status-text-prompt { font-weight: bold; color: var(--text-main); margin-bottom: 5px; display: block;}
-
-        </style>
-    </head>
-    <body>
-        <div class="main-layout">
-            <div class="col-left">
-                <div id="status-bar">
-                    <div class="status-indicator status-pulse"></div>
-                    <span id="status-text">시스템 초기화 중...</span>
-                </div>
-                <div class="box">
-                    <h2>📖 이야기 (Story)</h2>
-                    <div id="story-container" class="content story-text"></div>
-                </div>
-            </div>
-
-            <div class="col-right">
-                <div class="box">
-                    <h2>💬 작가 회의 (Discussion)</h2>
-                    <div id="discussion-container" class="content"></div>
-                </div>
-
-                <div id="control-panel">
-                    <label class="status-text-prompt" for="god-input">⚡ 신(God)의 개입 (선택사항):</label>
-                    <input type="text" id="god-input" placeholder="예: 갑자기 거대한 해왕류가 나타나 배를 들이받는다!">
-                    
-                    <div class="btn-group">
-                        <button class="btn btn-continue" onclick="sendDecision('continue')">진행 (Proceed)</button>
-                        <button class="btn btn-end" onclick="sendDecision('end')">종료 (End)</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <script>
-            let lastDiscussionLength = 0;
-            let lastStoryLength = 0;
-
-            async function updateData() {
-                try {
-                    const response = await fetch('/data');
-                    const data = await response.json();
-                    
-                    if (data.current_status) document.getElementById('status-text').innerText = data.current_status;
-
-                    if (data.story_parts.length !== lastStoryLength) {
-                        const storyHtml = data.story_parts.map(part => `<div class="story-paragraph">${part}</div>`).join("");
-                        const storyContainer = document.getElementById('story-container');
-                        storyContainer.innerHTML = storyHtml;
-                        storyContainer.scrollTop = storyContainer.scrollHeight;
-                        lastStoryLength = data.story_parts.length;
-                    }
-
-                    if (data.discussion.length !== lastDiscussionLength) {
-                        const discussionContainer = document.getElementById('discussion-container');
-                        discussionContainer.innerHTML = data.discussion.map(d => {
-                            const formatted = d.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-                            return `<div class="discussion-item">${formatted}</div>`;
-                        }).join('');
-                        discussionContainer.scrollTop = discussionContainer.scrollHeight;
-                        lastDiscussionLength = data.discussion.length;
-                    }
-
-                    const panel = document.getElementById('control-panel');
-                    const indicator = document.querySelector('.status-indicator');
-                    
-                    if (data.waiting_for_input) {
-                        panel.style.display = 'flex'; 
-                        indicator.style.backgroundColor = '#f9e2af';
-                        indicator.style.boxShadow = '0 0 10px #f9e2af';
-                        indicator.classList.remove('status-pulse');
-                    } else {
-                        panel.style.display = 'none'; 
-                        indicator.style.backgroundColor = '#a6e3a1';
-                        indicator.style.boxShadow = '0 0 10px #a6e3a1';
-                        indicator.classList.add('status-pulse');
-                    }
-                } catch (e) { console.error("데이터 로드 실패", e); }
-            }
-
-            async function sendDecision(decision) {
-                const instruction = document.getElementById('god-input').value;
-                
-                await fetch('/decision', { 
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ decision: decision, instruction: instruction })
-                });
-                
-                document.getElementById('god-input').value = ''; // 입력창 초기화
-                document.getElementById('control-panel').style.display = 'none';
-                document.getElementById('status-text').innerText = "명령 전달 중...";
-            }
-
-            setInterval(updateData, 500);
-            updateData();
-        </script>
-    </body>
-</html>
-"""
+# 템플릿 파일 경로 설정
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
 
 @app.get("/", response_class=HTMLResponse)
 async def get_ui():
-    return html_content
+    # templates 폴더의 index.html 파일을 반환합니다.
+    return FileResponse(os.path.join(TEMPLATES_DIR, "index.html"))
 
 @app.get("/data")
 async def get_data():

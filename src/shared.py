@@ -4,7 +4,7 @@ global_state = {
     "discussion": [],
     "waiting_for_input": False, 
     "user_decision": None,      
-    "user_instruction": None,   # [추가] 사용자가 입력한 '신의 개입' 텍스트
+    "user_instruction": None,   # [추가] 사용자가 입력한 '개입' 텍스트
     "current_status": "시스템 대기 중...",
     "character_thoughts": {}    
 }

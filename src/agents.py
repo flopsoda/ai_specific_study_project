@@ -182,7 +182,7 @@ def generate_character_opinion(state: GraphState) -> dict:
 async def check_continuation(state: GraphState):
     print("\n⏳ 웹 브라우저에서 [계속하기] 또는 [종료]를 선택하기를 기다리는 중...")
     
-    global_state["current_status"] = "⏳ 당신의 선택(또는 신의 개입)을 기다리고 있습니다."
+    global_state["current_status"] = "⏳ 당신의 선택을 기다리고 있습니다."
 
     # 1. 웹 UI에 버튼을 띄우라고 신호를 보냄
     global_state["waiting_for_input"] = True
@@ -201,7 +201,7 @@ async def check_continuation(state: GraphState):
     
     print(f"✅ 사용자 선택 확인: {decision}")
     if instruction:
-        print(f"⚡ 신의 개입: {instruction}")
+        print(f"사용자 개입: {instruction}")
     
     if decision == "continue":
         # [핵심] 사용자가 입력한 내용이 있다면, 토론 로그의 첫 번째 항목으로 강제 주입합니다.
