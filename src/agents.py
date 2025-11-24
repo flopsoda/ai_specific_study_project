@@ -182,26 +182,36 @@ def generate_character_opinion(state: GraphState) -> dict:
 async def check_continuation(state: GraphState):
     print("\n⏳ 웹 브라우저에서 [계속하기] 또는 [종료]를 선택하기를 기다리는 중...")
     
-    # [추가] 상태 업데이트
-    global_state["current_status"] = "⏳ 당신의 선택을 기다리고 있습니다."
+    global_state["current_status"] = "⏳ 당신의 선택(또는 신의 개입)을 기다리고 있습니다."
 
     # 1. 웹 UI에 버튼을 띄우라고 신호를 보냄
     global_state["waiting_for_input"] = True
-    global_state["user_decision"] = None # 이전 결정 초기화
+    global_state["user_decision"] = None 
+    global_state["user_instruction"] = None # 초기화
 
-    # 2. 웹에서 버튼을 누를 때까지 무한 대기 (0.5초 간격 체크)
+    # 2. 웹에서 버튼을 누를 때까지 무한 대기
     while global_state["user_decision"] is None:
         await asyncio.sleep(0.5)
 
     # 3. 결정이 내려지면 신호를 끄고 진행
     decision = global_state["user_decision"]
+    instruction = global_state.get("user_instruction", "") # 사용자 입력 가져오기
+
     global_state["waiting_for_input"] = False
     
     print(f"✅ 사용자 선택 확인: {decision}")
+    if instruction:
+        print(f"⚡ 신의 개입: {instruction}")
     
-    # [핵심 수정] 사용자가 '계속하기'를 눌렀다면, 새로운 토론을 위해 이전 토론 로그를 비웁니다.
     if decision == "continue":
-        return {"user_decision": decision, "discussion": []} # <--- 여기서 초기화!
+        # [핵심] 사용자가 입력한 내용이 있다면, 토론 로그의 첫 번째 항목으로 강제 주입합니다.
+        # 이렇게 하면 다음 턴의 캐릭터들이 이 내용을 보고 기겁하며 반응하게 됩니다.
+        new_discussion = []
+        if instruction:
+            system_msg = f"*** [긴급 상황 발생] 외부의 절대적인 힘에 의해 다음 현상이 발생했습니다: '{instruction}' ***\n(모든 작가는 이 상황을 최우선으로 반영하여 다음 전개를 논의하십시오.)"
+            new_discussion.append(system_msg)
+            
+        return {"user_decision": decision, "discussion": new_discussion} 
         
     return {"user_decision": decision}
 
