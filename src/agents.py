@@ -2,7 +2,7 @@ import os
 from typing import List, TypedDict, Optional
 from langchain_google_genai import ChatGoogleGenerativeAI
 import asyncio
-from config import CHARACTERS, MAIN_WRITER_CONFIG, CHARACTER_AGENT_CONFIG
+from config import CHARACTERS, MAIN_WRITER_CONFIG, CHARACTER_AGENT_CONFIG, JUDGE_CONFIG 
 from shared import global_state
 from langgraph.graph import END
 from utils import get_story_context
@@ -27,51 +27,10 @@ WRITER_LLM = ChatGoogleGenerativeAI(
     model=MAIN_WRITER_CONFIG["model"],
     temperature=MAIN_WRITER_CONFIG["temperature"]
 )
-
-# ---토론 내용을 바탕으로 이야기를 작성하는 메인 작가 에이전트---
-def main_writer_node(state: GraphState) -> dict:
-    """
-    지금까지의 이야기와 캐릭터들의 토론 내용을 종합하여 다음 이야기 단락을 작성합니다.
-    """
-    global_state["current_status"] = "✍️ 메인 작가가 이야기를 집필하고 있습니다..."
-    
-    print("\n--- 메인 작가 에이전트 작동 ---")
-    
-    # 작가는 현재 컨텍스트를 보고 글을 씁니다.
-    story_so_far = state.get("current_context", "")
-    context = state.get("retrieved_memory", "") # [추가] 메모리 가져오기
-
-    discussion_str = "\n".join(state["discussion"])
-    
-    prompt = MAIN_WRITER_CONFIG["prompt_template"].format(
-        world_name=MAIN_WRITER_CONFIG["world_name"],
-        world_description=MAIN_WRITER_CONFIG["world_description"],
-        context=context, # [수정] State에서 받은 메모리 주입
-        story_so_far=story_so_far,
-        discussion_str=discussion_str
-    )
-    response = WRITER_LLM.invoke(prompt)
-    next_part = response.content.strip()
-    print(f"\n[메인 작가] 이야기 생성 완료:\n{next_part[:100]}...\n")
-    
-    # [핵심 변경] 이야기가 추가되었으므로, 다음 턴을 위해 컨텍스트를 미리 갱신합니다.
-    new_story_parts = state["story_parts"] + ["\n\n" + next_part]
-    new_context = get_story_context(new_story_parts) # 여기서 한 번만 계산!
-
-    # [삭제] 여기서 검색하던 로직 제거 (retrieve_memory_node로 이동했으므로)
-    # relevant_memory = lore_book.search_relevant_info(story_so_far) 
-    
-    # [유지] 글 다 쓰고 나서 저장(Archiving)하는 건 여전히 여기서 해야 함
-    lore_book.check_and_archive(new_story_parts)
-    
-    return {
-        "story_parts": new_story_parts,
-        "current_context": new_context,
-        # "retrieved_memory": "" # (선택) 다음 턴을 위해 메모리 초기화? 굳이 안 해도 덮어씌워짐
-    }
-
-# --- 노드(Node)로 사용할 함수 정의 ---
-
+JUDGE_LLM = ChatGoogleGenerativeAI(
+    model=JUDGE_CONFIG["model"],
+    temperature=JUDGE_CONFIG["temperature"]
+)
 ## ---캐릭터 중 누가 토론 중 의견을 제시할지 경쟁하는 함수---
 VOTE_LLM = ChatGoogleGenerativeAI(
     model = CHARACTER_AGENT_CONFIG["vote_model"],
@@ -84,19 +43,91 @@ OPINION_LLM = ChatGoogleGenerativeAI(
     temperature=CHARACTER_AGENT_CONFIG["opinion_temperature"]
 )
 
+# ---토론 내용을 바탕으로 이야기를 작성하는 메인 작가 에이전트---
+def main_writer_node(state: GraphState) -> dict:
+    """
+    지금까지의 이야기와 캐릭터들의 토론 내용을 종합하여 다음 이야기 단락을 작성합니다.
+    """
+    print("\n--- 메인 작가 에이전트 작동 ---")
+    
+    phase = state.get("phase","ideation")
+    story_so_far = state.get("current_context", "")
+    context = state.get("retrieved_memory", "") # [추가] 메모리 가져오기
+    discussion_str = "\n".join(state["discussion"])
+    
+    # --- phase에 따라 다른 프롬프트 사용 ---
+    if phase == "ideation":
+        # 1차 회의 후: 초안 작성
+        global_state["current_status"] = "✍️ 메인 작가가 초안을 작성하고 있습니다..."
+        print("\n--- 메인 작가: 초안 작성 중 ---")
+        
+        prompt = MAIN_WRITER_CONFIG["prompt_template"].format(
+            world_name=MAIN_WRITER_CONFIG["world_name"],
+            world_description=MAIN_WRITER_CONFIG["world_description"],
+            context=context,
+            story_so_far=story_so_far,
+            discussion_str=discussion_str
+        )
+    else:
+        # 비평 회의 후: 수정
+        global_state["current_status"] = "✍️ 메인 작가가 초안을 수정하고 있습니다..."
+        print("\n--- 메인 작가: 초안 수정 중 ---")
+        
+        prompt = MAIN_WRITER_CONFIG["prompt_template_revise"].format(
+            world_name=MAIN_WRITER_CONFIG["world_name"],
+            world_description=MAIN_WRITER_CONFIG["world_description"],
+            context=context,
+            story_so_far=story_so_far,
+            current_draft=state.get("draft", ""),
+            critique_str=discussion_str
+        )
+
+    response = WRITER_LLM.invoke(prompt)
+    new_draft = response.content.strip()
+    print(f"\n[메인 작가] 결과:\n{new_draft[:100]}...\n")
+    
+    # --- 핵심: story_parts는 건드리지 않음! draft에만 저장 ---
+    # revision_history에 현재 회의 내용 누적
+    current_history = state.get("revision_history", [])
+    updated_history = current_history + state["discussion"]
+    
+    return {
+        "draft": new_draft,
+        "revision_history": updated_history,
+        "discussion": [],  # 다음 라운드 회의를 위해 비움
+        "phase": "critique",  # 다음은 비평 회의
+        "revision_count": state.get("revision_count", 0) + 1
+        # story_parts, current_context는 여기서 변경 안 함!
+    }
+
+# --- 노드(Node)로 사용할 함수 정의 ---
+
 # --- 1. 투표 헬퍼 함수 수정 ---
-async def _get_character_vote(character_name:str, story_so_far:str, discussion: list[str], context: str) -> Optional[str]:
+async def _get_character_vote(character_name:str, story_so_far:str, discussion: list[str],context: str, phase : str,draft: str,revision_history_str:str) -> Optional[str]:
     """단일 서브 에이전트의 투표를 비동기적으로 얻는 헬퍼 함수"""
     discussion_str = "\n".join(discussion)
     character_config = CHARACTERS[character_name]
     character_prompt = character_config["prompt"]
-    prompt = CHARACTER_AGENT_CONFIG["prompt_templates"]["vote"].format(
-        character_name=character_name,
-        character_prompt=character_prompt,
-        context=context, # [수정] State에서 받은 메모리 주입
-        story_so_far=story_so_far,
-        discussion_str=discussion_str
-    )
+
+    # --- phase에 따라 다른 프롬프트 사용 ---
+    if phase == "ideation":
+        prompt = CHARACTER_AGENT_CONFIG["prompt_templates"]["vote"].format(
+            character_name=character_name,
+            character_prompt=character_prompt,
+            context=context,
+            story_so_far=story_so_far,
+            discussion_str=discussion_str
+        )
+    else:  # critique
+        prompt = CHARACTER_AGENT_CONFIG["prompt_templates"]["vote_critique"].format(
+            character_name=character_name,
+            character_prompt=character_prompt,
+            context=context,
+            story_so_far=story_so_far,
+            draft=draft,
+            discussion_str=discussion_str,
+            revision_history_str=revision_history_str
+        )
     try:
         response = await VOTE_LLM.ainvoke(prompt)
         vote = response.content.strip() 
@@ -114,11 +145,18 @@ async def race_for_action(state: GraphState) -> dict:
     """
     모든 캐릭터에게 동시에 물어보고, 가장 먼저 '네'라고 답하는 캐릭터를 선택합니다.
     """
-    global_state["current_status"] = "👀 눈치 게임 중... (누가 발언할지 경쟁 중)"
-    
+    phase = state.get("phase", "ideation")
+    phase_display = "1차 회의 (아이디어)" if phase == "ideation" else "비평 회의"
+
+    global_state["current_status"] = f"👀 [{phase_display}] 눈치 게임 중... (누가 발언할지 경쟁 중)"
+    global_state["phase"] = phase  # 웹 UI에서 표시용
+
     # [수정] 매번 계산하지 않고, State에 저장된 값을 바로 사용
     story_so_far = state.get("current_context", "")
-    context = state.get("retrieved_memory", "") # [추가] 메모리 가져오기
+    context = state.get("retrieved_memory", "")
+    draft = state.get("draft", "")
+    revision_history = state.get("revision_history", [])
+    revision_history_str = "\n---\n".join(revision_history) if revision_history else "(이전 비평 없음)"
     
     discussion = state["discussion"]
     # [검증용 로그] 실제로 비워졌는지 터미널에서 확인
@@ -130,7 +168,7 @@ async def race_for_action(state: GraphState) -> dict:
         
     characters = list(CHARACTERS.keys()) # 경쟁에 참여할 캐릭터 목록
     # _get_character_vote 호출 시 context 전달
-    tasks = [asyncio.create_task(_get_character_vote(name, story_so_far, discussion, context)) for name in characters] 
+    tasks = [asyncio.create_task(_get_character_vote(name, story_so_far, discussion, context, phase, draft, revision_history_str)) for name in characters]
     winner = None
     # asyncio.as_completed는 작업이 완료되는 순서대로 결과를 반환합니다.
     for future in asyncio.as_completed(tasks):
@@ -154,8 +192,10 @@ async def race_for_action(state: GraphState) -> dict:
 def generate_character_opinion(state: GraphState) -> dict:
     """선택된 캐릭터가 토론에 대한 의견을 생성하고 discussion 상태를 업데이트합니다."""
     character_name = state["selected_character"]
+    phase = state.get("phase", "ideation")
+    phase_display = "1차 회의" if phase == "ideation" else "비평 회의"
     
-    global_state["current_status"] = f"🗣️ '{character_name}' 작가가 발언을 정리하는 중..."
+    global_state["current_status"] = f"🗣️ [{phase_display}] '{character_name}' 작가가 발언을 정리하는 중..."
 
     if not character_name or character_name == "None":
         return {}
@@ -166,17 +206,33 @@ def generate_character_opinion(state: GraphState) -> dict:
     
     discussion = state["discussion"]
     discussion_str = "\n".join(discussion)
+    
     # 캐릭터 설정 가져오기
     character_config = CHARACTERS[character_name]
     
-    # [수정] 전역 인스턴스 OPINION_LLM 사용
-    prompt = CHARACTER_AGENT_CONFIG["prompt_templates"]["generate_opinion"].format(
-        character_name=character_name,
-        character_prompt=character_config["prompt"],
-        context=context, # [수정] State에서 받은 메모리 주입
-        story_so_far=story_so_far,
-        discussion_str=discussion_str
-    )
+    draft = state.get("draft", "")
+    revision_history = state.get("revision_history", [])
+    revision_history_str = "\n---\n".join(revision_history) if revision_history else "(이전 비평 없음)"
+    
+    if phase == "ideation":
+        prompt = CHARACTER_AGENT_CONFIG["prompt_templates"]["generate_opinion"].format(
+            character_name=character_name,
+            character_prompt=character_config["prompt"],
+            context=context,
+            story_so_far=story_so_far,
+            discussion_str=discussion_str
+        )
+    else:  # critique
+        prompt = CHARACTER_AGENT_CONFIG["prompt_templates"]["generate_opinion_critique"].format(
+            character_name=character_name,
+            character_prompt=character_config["prompt"],
+            context=context,
+            story_so_far=story_so_far,
+            draft=draft,
+            discussion_str=discussion_str,
+            revision_history_str=revision_history_str
+        )
+
     response = OPINION_LLM.invoke(prompt)
     opinion = f"[{character_name} 파트 담당 작가]: {response.content.strip()}" 
     print(opinion)
@@ -209,17 +265,91 @@ async def check_continuation(state: GraphState):
         print(f"사용자 개입: {instruction}")
     
     if decision == "continue":
-        # [핵심] 사용자가 입력한 내용이 있다면, 토론 로그의 첫 번째 항목으로 강제 주입합니다.
-        # 이렇게 하면 다음 턴의 캐릭터들이 이 내용을 보고 기겁하며 반응하게 됩니다.
         new_discussion = []
         if instruction:
             system_msg = f"*** [긴급 상황 발생] 외부의 절대적인 힘에 의해 다음 현상이 발생했습니다: '{instruction}' ***\n(모든 작가는 이 상황을 최우선으로 반영하여 다음 전개를 논의하십시오.)"
             new_discussion.append(system_msg)
-            
-        return {"user_decision": decision, "discussion": new_discussion} 
+        
+        # [핵심] 새 문단 사이클 시작 → 상태 초기화
+        return {
+            "user_decision": decision,
+            "discussion": new_discussion,
+            "draft": None,
+            "revision_history": [],
+            "revision_count": 0,
+            "phase": "ideation",
+            "judge_result": None
+        }
         
     return {"user_decision": decision}
 
+# --- 심사 노드: 비평 회의 결과를 보고 통과/반려 결정 ---
+def judge_node(state: GraphState) -> dict:
+    """
+    비평 회의 결과를 검토하고 통과 또는 수정 필요 여부를 판단합니다.
+    """
+    global_state["current_status"] = "🧐 편집장이 초안을 심사 중..."
+    print("\n--- 편집장: 초안 심사 중 ---")
+    
+    draft = state.get("draft", "")
+    discussion = state.get("discussion", [])
+    critique_str = "\n".join(discussion) if discussion else "(비평 없음 - 모두 만족)"
+    
+    # 비평 회의에서 아무도 발언 안 했으면 → 자동 통과
+    if not discussion:
+        print("✅ [편집장] 비평 회의에서 이의 없음 → 자동 통과!")
+        return {"judge_result": "pass"}
+    
+    prompt = JUDGE_CONFIG["prompt_template"].format(
+        draft=draft,
+        critique_str=critique_str
+    )
+    
+    response = JUDGE_LLM.invoke(prompt)
+    result = response.content.strip()
+    
+    if "통과" in result:
+        print("✅ [편집장] 초안 승인!")
+        return {"judge_result": "pass"}
+    else:
+        print(f"❌ [편집장] 수정 필요")
+        return {"judge_result": "revise"}
+# --- 문단 확정 노드: draft를 story_parts에 추가 ---
+def finalize_node(state: GraphState) -> dict:
+    """
+    심사를 통과한 draft를 story_parts에 추가하고, 상태를 초기화합니다.
+    """
+    global_state["current_status"] = "🎉 문단 확정 및 저장 중..."
+    print("\n--- 문단 확정: 이야기에 추가 ---")
+    
+    draft = state.get("draft", "")
+    story_parts = state.get("story_parts", [])
+    
+    # draft를 story_parts에 추가
+    new_story_parts = story_parts + [draft]
+    new_context = get_story_context(new_story_parts)
+    
+    # 웹 대시보드 업데이트
+    global_state["story_parts"] = new_story_parts
+    global_state["discussion"] = []
+    global_state["draft"] = None
+    
+    # LoreBook에 저장 (RAG)
+    lore_book.check_and_archive(new_story_parts)
+    
+    print(f"📚 현재까지 {len(new_story_parts)}개의 문단이 작성되었습니다.")
+    
+    return {
+        "story_parts": new_story_parts,
+        "current_context": new_context,
+        "draft": None,
+        "revision_history": [],
+        "revision_count": 0,
+        "phase": "ideation",
+        "judge_result": None,
+        "discussion": []
+    }
+ 
 # [추가됨] 라우팅 로직
 def route_continuation(state: GraphState):
     # check_continuation 노드에서 결정된 사항을 global_state에서 확인
