@@ -96,7 +96,9 @@ def main_writer_node(state: GraphState) -> dict:
         updated_history = current_history + state["discussion"]
     else:
         updated_history = current_history  # ideation 회의는 저장 안 함
-
+    
+    global_state["draft"] = new_draft
+    global_state["revision_count"] = state.get("revision_count", 0) + 1  # [추가]
     return {
     "draft": new_draft,
     "revision_history": updated_history,

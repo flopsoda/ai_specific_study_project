@@ -107,6 +107,11 @@
                     <h2>📖 이야기 (Story)</h2>
                     <div id="story-container" class="content story-text"></div>
                 </div>
+
+                <div class="box" id="draft-box" style="display: none; flex: 0.5; border-color: var(--warning-color);">
+                    <h2 style="color: var(--warning-color);">📝 현재 초안 (Draft) - 수정 횟수: <span id="revision-count">0</span></h2>
+                    <div id="draft-container" class="content story-text"></div>
+                </div>
             </div>
 
             <div class="col-right">
@@ -154,6 +159,19 @@
                         }).join('');
                         discussionContainer.scrollTop = discussionContainer.scrollHeight;
                         lastDiscussionLength = data.discussion.length;
+                    }
+
+                    // 초안(Draft) 업데이트
+                    const draftBox = document.getElementById('draft-box');
+                    const draftContainer = document.getElementById('draft-container');
+                    const revisionCount = document.getElementById('revision-count');
+
+                    if (data.draft) {
+                        draftBox.style.display = 'flex';
+                        draftContainer.innerHTML = `<div class="story-paragraph">${data.draft}</div>`;
+                        revisionCount.innerText = data.revision_count || 0;
+                    } else {
+                        draftBox.style.display = 'none';
                     }
 
                     const panel = document.getElementById('control-panel');
