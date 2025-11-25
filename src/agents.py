@@ -1,3 +1,4 @@
+from cmath import phase
 import os
 from typing import List, TypedDict, Optional
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -89,15 +90,19 @@ def main_writer_node(state: GraphState) -> dict:
     # --- 핵심: story_parts는 건드리지 않음! draft에만 저장 ---
     # revision_history에 현재 회의 내용 누적
     current_history = state.get("revision_history", [])
-    updated_history = current_history + state["discussion"]
-    
+
+# phase가 critique일 때만 회의 내용을 히스토리에 추가
+    if phase == "critique":
+        updated_history = current_history + state["discussion"]
+    else:
+        updated_history = current_history  # ideation 회의는 저장 안 함
+
     return {
-        "draft": new_draft,
-        "revision_history": updated_history,
-        "discussion": [],  # 다음 라운드 회의를 위해 비움
-        "phase": "critique",  # 다음은 비평 회의
-        "revision_count": state.get("revision_count", 0) + 1
-        # story_parts, current_context는 여기서 변경 안 함!
+    "draft": new_draft,
+    "revision_history": updated_history,
+    "discussion": [],
+    "phase": "critique",
+    "revision_count": state.get("revision_count", 0) + 1
     }
 
 # --- 노드(Node)로 사용할 함수 정의 ---
