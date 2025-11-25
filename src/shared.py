@@ -4,10 +4,10 @@ global_state = {
     "discussion": [],
     "waiting_for_input": False, 
     "user_decision": None,      
-    "user_instruction": None,   # [추가] 사용자가 입력한 '개입' 텍스트
+    "user_instruction": None,
     "current_status": "시스템 대기 중...",
-    # [추가] 새로운 필드
-    "phase": "ideation",    # 현재 단계 ("ideation" | "critique")
-    "draft": None,          # 현재 작성 중인 초안
-    "revision_count": 0,    # 수정 횟수
+    "phase": "ideation",
+    "draft": None,
+    "revision_count": 0,
+    "current_node": None,  # [추가] 현재 실행 중인 노드 이름
 }

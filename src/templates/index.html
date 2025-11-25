@@ -17,7 +17,7 @@
             }
 
             body { 
-                font-family: 'Pretendard', 'Segoe UI', sans-serif; 
+                font-family: 'Ridibatang', 'KoPub Batang', 'Noto Serif KR', serif; 
                 margin: 0; 
                 padding: 20px; 
                 background-color: var(--bg-color); 
@@ -51,6 +51,34 @@
                 70% { box-shadow: 0 0 0 10px rgba(166, 227, 161, 0); }
                 100% { box-shadow: 0 0 0 0 rgba(166, 227, 161, 0); }
             }
+            
+            /* 미니 워크플로우 그래프 */
+            .mini-graph {
+                display: flex; align-items: center; gap: 4px; margin-left: auto;
+                background: rgba(0,0,0,0.2); padding: 8px 12px; border-radius: 8px;
+            }
+            .graph-node {
+                width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center;
+                font-size: 14px; background: var(--border-color); color: var(--text-muted);
+                transition: all 0.3s ease; position: relative;
+            }
+            .graph-node.active {
+                background: var(--accent-color); color: #1e1e2e; transform: scale(1.15);
+                box-shadow: 0 0 12px var(--accent-color);
+            }
+            .graph-node.completed {
+                background: var(--success-color); color: #1e1e2e;
+            }
+            .graph-arrow {
+                color: var(--text-muted); font-size: 12px; opacity: 0.6;
+            }
+            .graph-node .tooltip {
+                position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
+                background: #1e1e2e; color: var(--text-main); padding: 4px 8px; border-radius: 4px;
+                font-size: 10px; white-space: nowrap; opacity: 0; pointer-events: none;
+                transition: opacity 0.2s; margin-bottom: 4px;
+            }
+            .graph-node:hover .tooltip { opacity: 1; }
 
             .box { 
                 background: var(--panel-bg); padding: 20px; border-radius: 16px; 
@@ -63,10 +91,30 @@
             }
             .content { flex: 1; overflow-y: auto; padding-right: 10px; font-size: 1.05rem; }
             .story-text { white-space: pre-wrap; line-height: 1.8; color: var(--text-main); font-family: 'Ridibatang', 'KoPub Batang', serif; }
-            .story-paragraph { margin-bottom: 1.5em; text-align: justify; }
+            .story-paragraph { 
+                margin-bottom: 1.5em; text-align: justify; 
+                padding: 15px 20px; background: rgba(69, 71, 90, 0.3); border-radius: 8px;
+                border-left: 3px solid var(--border-color); position: relative;
+            }
+            .story-paragraph:last-child {
+                border-left-color: var(--accent-color);
+                background: rgba(137, 180, 250, 0.1);
+            }
+            .story-paragraph:last-child::before {
+                content: '✨ NEW';
+                position: absolute; top: -10px; left: 10px;
+                background: var(--accent-color); color: #1e1e2e;
+                font-size: 10px; font-weight: bold; padding: 2px 8px; border-radius: 4px;
+            }
+            .story-paragraph:only-child::before { content: none; }
+            .story-paragraph:only-child { border-left-color: var(--border-color); background: rgba(69, 71, 90, 0.3); }
             .discussion-item { 
-                margin-bottom: 12px; padding: 15px; background: #45475a; border-radius: 12px; 
-                border-left: 4px solid var(--accent-color); line-height: 1.6; color: #eceff4;
+                margin-bottom: 12px; padding: 15px 20px; background: rgba(69, 71, 90, 0.3); border-radius: 8px; 
+                border-left: 3px solid var(--border-color); line-height: 1.8; color: var(--text-main);
+            }
+            .discussion-item:last-child {
+                border-left-color: var(--accent-color);
+                background: rgba(137, 180, 250, 0.1);
             }
 
             /* 오른쪽 열 - 컨트롤 패널 */
@@ -102,6 +150,37 @@
                 <div id="status-bar">
                     <div class="status-indicator status-pulse"></div>
                     <span id="status-text">시스템 초기화 중...</span>
+                    
+                    <!-- 미니 워크플로우 그래프 -->
+                    <div class="mini-graph">
+                        <div class="graph-node" id="node-user_input" title="사용자 입력">
+                            <span class="tooltip">사용자 입력</span>👤
+                        </div>
+                        <span class="graph-arrow">→</span>
+                        <div class="graph-node" id="node-memory" title="기억 검색">
+                            <span class="tooltip">기억 검색</span>🧠
+                        </div>
+                        <span class="graph-arrow">→</span>
+                        <div class="graph-node" id="node-race_for_action" title="발언권 경쟁">
+                            <span class="tooltip">발언권 경쟁</span>🏃
+                        </div>
+                        <span class="graph-arrow">→</span>
+                        <div class="graph-node" id="node-generate_opinion" title="의견 생성">
+                            <span class="tooltip">의견 생성</span>💬
+                        </div>
+                        <span class="graph-arrow">→</span>
+                        <div class="graph-node" id="node-main_writer" title="초안 작성">
+                            <span class="tooltip">초안 작성</span>✍️
+                        </div>
+                        <span class="graph-arrow">→</span>
+                        <div class="graph-node" id="node-judge" title="편집장 심사">
+                            <span class="tooltip">편집장 심사</span>🧐
+                        </div>
+                        <span class="graph-arrow">→</span>
+                        <div class="graph-node" id="node-finalize" title="문단 확정">
+                            <span class="tooltip">문단 확정</span>✅
+                        </div>
+                    </div>
                 </div>
                 <div class="box">
                     <h2>📖 이야기 (Story)</h2>
@@ -135,6 +214,24 @@
         <script>
             let lastDiscussionLength = 0;
             let lastStoryLength = 0;
+            let lastCurrentNode = '';
+
+            // 노드 하이라이트 업데이트 함수
+            function updateGraphHighlight(currentNode) {
+                if (currentNode === lastCurrentNode) return;
+                lastCurrentNode = currentNode;
+                
+                // 모든 노드에서 active 클래스 제거
+                document.querySelectorAll('.graph-node').forEach(node => {
+                    node.classList.remove('active');
+                });
+                
+                // 현재 노드에 active 클래스 추가
+                const activeNode = document.getElementById('node-' + currentNode);
+                if (activeNode) {
+                    activeNode.classList.add('active');
+                }
+            }
 
             async function updateData() {
                 try {
@@ -142,6 +239,11 @@
                     const data = await response.json();
                     
                     if (data.current_status) document.getElementById('status-text').innerText = data.current_status;
+                    
+                    // 그래프 노드 하이라이트 업데이트
+                    if (data.current_node) {
+                        updateGraphHighlight(data.current_node);
+                    }
 
                     if (data.story_parts.length !== lastStoryLength) {
                         const storyHtml = data.story_parts.map(part => `<div class="story-paragraph">${part}</div>`).join("");

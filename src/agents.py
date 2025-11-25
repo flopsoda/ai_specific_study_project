@@ -49,6 +49,7 @@ def main_writer_node(state: GraphState) -> dict:
     """
     지금까지의 이야기와 캐릭터들의 토론 내용을 종합하여 다음 이야기 단락을 작성합니다.
     """
+    global_state["current_node"] = "main_writer"  # [추가] 현재 노드 표시
     print("\n--- 메인 작가 에이전트 작동 ---")
     
     phase = state.get("phase","ideation")
@@ -85,6 +86,8 @@ def main_writer_node(state: GraphState) -> dict:
 
     response = WRITER_LLM.invoke(prompt)
     new_draft = response.content.strip()
+    # [추가] 프롬프트 라벨이 응답에 포함된 경우 제거
+    new_draft = new_draft.replace("[수정된 이야기]", "").strip()
     print(f"\n[메인 작가] 결과:\n{new_draft[:100]}...\n")
     
     # --- 핵심: story_parts는 건드리지 않음! draft에만 저장 ---
@@ -152,6 +155,7 @@ async def race_for_action(state: GraphState) -> dict:
     """
     모든 캐릭터에게 동시에 물어보고, 가장 먼저 '네'라고 답하는 캐릭터를 선택합니다.
     """
+    global_state["current_node"] = "race_for_action"  # [추가] 현재 노드 표시
     phase = state.get("phase", "ideation")
     phase_display = "1차 회의 (아이디어)" if phase == "ideation" else "비평 회의"
 
@@ -198,6 +202,7 @@ async def race_for_action(state: GraphState) -> dict:
 ## ---선택된 캐릭터가 토론에 대한 의견을 생성하는 함수---
 def generate_character_opinion(state: GraphState) -> dict:
     """선택된 캐릭터가 토론에 대한 의견을 생성하고 discussion 상태를 업데이트합니다."""
+    global_state["current_node"] = "generate_opinion"  # [추가] 현재 노드 표시
     character_name = state["selected_character"]
     phase = state.get("phase", "ideation")
     phase_display = "1차 회의" if phase == "ideation" else "비평 회의"
@@ -248,6 +253,7 @@ def generate_character_opinion(state: GraphState) -> dict:
 
 # [수정됨] 사용자 입력을 비동기로 기다리는 노드
 async def check_continuation(state: GraphState):
+    global_state["current_node"] = "user_input"  # [추가] 현재 노드 표시
     print("\n⏳ 웹 브라우저에서 [계속하기] 또는 [종료]를 선택하기를 기다리는 중...")
     
     global_state["current_status"] = "⏳ 당신의 선택을 기다리고 있습니다."
@@ -295,6 +301,7 @@ def judge_node(state: GraphState) -> dict:
     """
     비평 회의 결과를 검토하고 통과 또는 수정 필요 여부를 판단합니다.
     """
+    global_state["current_node"] = "judge"  # [추가] 현재 노드 표시
     global_state["current_status"] = "🧐 편집장이 초안을 심사 중..."
     print("\n--- 편집장: 초안 심사 중 ---")
     
@@ -326,6 +333,7 @@ def finalize_node(state: GraphState) -> dict:
     """
     심사를 통과한 draft를 story_parts에 추가하고, 상태를 초기화합니다.
     """
+    global_state["current_node"] = "finalize"  # [추가] 현재 노드 표시
     global_state["current_status"] = "🎉 문단 확정 및 저장 중..."
     print("\n--- 문단 확정: 이야기에 추가 ---")
     
@@ -369,6 +377,7 @@ def route_continuation(state: GraphState):
 
 # [신규] 토론 시작 전, 관련 기억을 검색하여 State에 저장하는 노드
 def retrieve_memory_node(state: GraphState) -> dict:
+    global_state["current_node"] = "memory"  # [추가] 현재 노드 표시
     print("\n🧠 [System] 이번 턴에 필요한 과거 기억을 검색합니다...")
     
     # 검색 쿼리는 현재 컨텍스트(최근 이야기)를 사용
