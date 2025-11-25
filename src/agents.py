@@ -16,6 +16,11 @@ class GraphState(TypedDict):
     discussion : list[str]
     selected_character: str
     user_decision: Optional[str]
+    draft: Optional[str]             # 현재 작성 중인 초안
+    revision_history: List[str]      # 이번 문단의 전체 회의 기록
+    revision_count: int              # 수정 횟수
+    phase: str                       # "ideation" | "critique"
+    judge_result: Optional[str]      # "pass" | "revise" (라우팅에 사용)
 
 # [추가] 메인 작가용 LLM 전역 인스턴스 생성
 WRITER_LLM = ChatGoogleGenerativeAI(
