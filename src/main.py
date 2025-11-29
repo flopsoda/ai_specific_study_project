@@ -13,7 +13,8 @@ from agents import GraphState
 from config import STORY_CONFIG
 from server import start_server
 from shared import global_state
-from utils import get_story_context # 임포트 추가
+from utils import get_story_context
+
 
 # --- 그래프 실행 ---
 async def main():
@@ -23,33 +24,42 @@ async def main():
     print("\n🌐 웹 모니터링 주소: http://127.0.0.1:8000")
     print("   (브라우저를 열어 진행 상황을 실시간으로 확인하세요)\n")
 
+    # 2. 그래프 빌드
     app = build_graph()
     
-    # 그래프 실행 설정
+    # 3. 초기 상태 설정
     initial_prompt = STORY_CONFIG["initial_prompt"]
-    
-    # [수정] 초기 컨텍스트 설정
     initial_story_parts = [initial_prompt]
     initial_context = get_story_context(initial_story_parts)
 
     initial_state: GraphState = {
+        # 기본 필드
         "story_parts": initial_story_parts,
-        "current_context": initial_context, # [추가] 초기값 설정
+        "current_context": initial_context,
+        "retrieved_memory": "",
         "discussion": [], 
-        "selected_character": ""
+        "selected_character": "",
+        "user_decision": None,
+        # 초안/비평 순환 관련 필드
+        "draft": None,
+        "revision_history": [],
+        "revision_count": 0,
+        "phase": "ideation",
+        "judge_result": None,
     }
     
-    # 초기 상태를 웹 공유 변수에 반영
+    # 4. 초기 상태를 웹 공유 변수에 반영
     global_state["story_parts"] = initial_state["story_parts"]
     global_state["discussion"] = initial_state["discussion"]
+    global_state["phase"] = initial_state["phase"]
+    global_state["draft"] = initial_state["draft"]
+    global_state["revision_count"] = initial_state["revision_count"]
 
+    # 5. 그래프 실행
     config = {"recursion_limit": STORY_CONFIG["recursion_limit"]} 
-    
-    print("--- 이야기 생성을 시작합니다 (콘솔에서 입력 대기 시 입력해주세요) ---")
+    print("--- 이야기 생성을 시작합니다 ---")
 
-    # ainvoke 대신 astream을 사용하여 단계별 상태 변화를 감지합니다.
     async for event in app.astream(initial_state, config=config):
-        # event는 각 노드의 실행 결과(Dict)를 담고 있습니다.
         for node_name, state_update in event.items():
             if state_update is None:
                 continue
@@ -58,12 +68,11 @@ async def main():
                 global_state["story_parts"] = state_update["story_parts"]
             if "discussion" in state_update:
                 global_state["discussion"] = state_update["discussion"]
-            
-            # (선택 사항) 콘솔에도 진행 상황 간단 출력
-            # print(f"[{node_name}] 완료")
 
+    # 6. 최종 결과 출력
     print("\n--- 최종 결과물 ---")
-    print("".join(global_state['story_parts']))
+    print("\n---\n".join(global_state['story_parts']))
+
 
 if __name__ == "__main__":
     asyncio.run(main())

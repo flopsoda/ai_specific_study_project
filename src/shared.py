@@ -9,5 +9,5 @@ global_state = {
     "phase": "ideation",
     "draft": None,
     "revision_count": 0,
-    "current_node": None,  # [추가] 현재 실행 중인 노드 이름
+    "current_node": None,  
 }
